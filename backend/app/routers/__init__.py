@@ -1,0 +1,15 @@
+from app.routers import (
+    auth,
+    documents,
+    invoices,
+    admin,
+    onboarding,
+    company,
+    audit,
+    mfa,
+    templates,
+    review,
+    gst_registrations,
+    customers,
+    sales_invoices,
+)

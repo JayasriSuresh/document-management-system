@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Invoice</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 1cm;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #000;
+            font-size: 11px;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .p-5 { padding: 5px; }
+
+        /* Page container — fills A4 height */
+        .page-wrap {
+            min-height: 277mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .warnings { display: none; }
+
+        /* Single outer border wrapper */
+        .invoice-outer {
+            border: 1px solid #000;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* === SECTION ROWS === */
+        .section-row {
+            display: flex;
+            border-bottom: 1px solid #000;
+        }
+        .section-row:last-child { border-bottom: none; }
+
+        .col-half {
+            width: 50%;
+            padding: 7px;
+            vertical-align: top;
+        }
+        .col-half:first-child { border-right: 1px solid #000; }
+
+        .col-full { width: 100%; padding: 7px; }
+
+        /* Header */
+        .inv-header {
+            text-align: center;
+            padding: 8px 5px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #000;
+        }
+        .inv-header .title { font-size: 13px; font-weight: bold; letter-spacing: 1px; }
+        .inv-header .company { font-size: 16px; font-weight: bold; margin-top: 2px; }
+
+        /* Meta info row */
+        .meta-table { width: 100%; border-collapse: collapse; }
+        .meta-table td { padding: 3px 5px; vertical-align: top; width: 33.33%; }
+
+        /* === ITEMS TABLE === */
+        .items-section { flex: 1; border-bottom: 1px solid #000; }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 1px solid #000;
+        }
+        .items-table thead { display: table-header-group; }
+        .items-table th {
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 5px;
+            text-align: center;
+            font-size: 10px;
+            background-color: #f9f9f9;
+        }
+        .items-table th:last-child { border-right: none; }
+        /* Natural height — no fixed px per row */
+        .items-table td {
+            border-right: 1px solid #000;
+            padding: 5px;
+            vertical-align: top;
+        }
+        .items-table td:last-child { border-right: none; }
+        /* Filler rows */
+        .items-table tr.pad td { height: 22px; }
+        tr { page-break-inside: avoid; }
+
+        /* === TOTALS === */
+        .totals-col { width: 40%; border-left: 1px solid #000; }
+        .totals-inner { width: 100%; border-collapse: collapse; }
+        .totals-inner td { padding: 4px 6px; border-top: 1px solid #000; }
+        .totals-inner tr:first-child td { border-top: none; }
+
+        /* === BOTTOM ROW === */
+        .bottom-left { width: 60%; padding: 7px; }
+        .bottom-right { width: 40%; padding: 7px; text-align: right; border-left: 1px solid #000; vertical-align: bottom; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; }
+
+        .info-grid { width: 100%; border-collapse: collapse; }
+        .info-grid td { border: none; padding: 2px 4px; vertical-align: top; }
+
+        .footer-text { font-size: 10px; text-align: center; padding: 5px; border-top: 1px solid #000; }
+
+        /* Multi-line address support */
+        .addr { white-space: pre-line; }
+    </style>
+</head>
+<body>
+    {# warnings are returned in X-Invoice-Warnings response header #}
+
+    <div class="page-wrap">
+      <div class="invoice-outer">
+
+        <!-- TITLE + COMPANY -->
+        <div class="inv-header">
+            <div class="title">TAX INVOICE</div>
+            <div class="company">{{ seller.name }}</div>
+        </div>
+
+        <!-- SELLER / BUYER -->
+        <div class="section-row">
+            <div class="col-half">
+                <div class="bold" style="margin-bottom:4px;">SELLER DETAILS</div>
+                <div class="bold">{{ seller.name }}</div>
+                <div class="addr">{{ seller.address }}</div>
+                {% if seller.gstin %}<div style="margin-top:4px;">GSTIN: <span class="bold">{{ seller.gstin }}</span></div>{% endif %}
+                {% if seller.state %}<div>State: {{ seller.state }}{% if seller.state_code %}, Code: {{ seller.state_code }}{% endif %}</div>{% endif %}
+                {% if seller.phone %}<div>Phone: {{ seller.phone }}</div>{% endif %}
+                {% if seller.email %}<div>Email: {{ seller.email }}</div>{% endif %}
+            </div>
+            <div class="col-half">
+                <div class="bold" style="margin-bottom:4px;">BUYER DETAILS (BILL TO)</div>
+                <div class="bold">{{ buyer.name }}</div>
+                <div class="addr">{{ buyer.address }}</div>
+                {% if buyer.gstin %}<div style="margin-top:4px;">GSTIN: <span class="bold">{{ buyer.gstin }}</span></div>{% endif %}
+                {% if buyer.state %}<div>State: {{ buyer.state }}{% if buyer.state_code %}, Code: {{ buyer.state_code }}{% endif %}</div>{% endif %}
+                {% if buyer.phone %}<div>Phone: {{ buyer.phone }}</div>{% endif %}
+
+                {% if delivery and (delivery.name or delivery.address) %}
+                <div class="bold" style="margin-top:12px; margin-bottom:4px;">SHIP TO</div>
+                {% if delivery.name %}<div class="bold">{{ delivery.name }}</div>{% endif %}
+                {% if delivery.address %}<div class="addr">{{ delivery.address }}</div>{% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- INVOICE META -->
+        <div class="section-row">
+            <div class="col-full">
+                <table class="meta-table">
+                    <tr>
+                        <td><span class="bold">Invoice No:</span> {{ invoice.number or "" }}</td>
+                        <td><span class="bold">Date:</span> {{ invoice.date or "" }}</td>
+                        <td><span class="bold">Payment Terms:</span> {{ invoice.payment_terms or "" }}</td>
+                    </tr>
+                    <tr>
+                        <td><span class="bold">Ref:</span> {{ invoice.reference_no or invoice.other_references or "" }}</td>
+                        <td><span class="bold">Order No:</span> {{ invoice.buyers_order_no or "" }}</td>
+                        <td><span class="bold">Terms of Delivery:</span> {{ invoice.terms_of_delivery or "" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- ITEMS -->
+        <div class="items-section">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th width="5%">Sl</th>
+                        <th width="33%">Description</th>
+                        <th width="9%">HSN/SAC</th>
+                        <th width="9%">Qty</th>
+                        <th width="11%">{% if items and items[0].rate_includes_tax %}Rate (incl. GST){% else %}Rate{% endif %}</th>
+                        <th width="8%">Disc%</th>
+                        <th width="8%">GST%</th>
+                        <th width="12%">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="text-center">{{ item.sl or loop.index }}</td>
+                        <td>
+                            {{ item.description }}
+                            {% if item.batch %}<br><span style="font-size:9px; color:#555;">Batch: {{ item.batch }}</span>{% endif %}
+                        </td>
+                        <td class="text-center">{{ item.hsn if item.hsn is not none else "" }}</td>
+                        <td class="text-center">{{ item.qty if item.qty is not none else "" }}</td>
+                        <td class="text-right">{{ item.rate | inr if item.rate is not none else "" }}</td>
+                        <td class="text-center">{{ item.discount if item.discount is not none else "" }}</td>
+                        <td class="text-center">{% if item.gst_rate is not none %}{{ item.gst_rate | gst_fmt }}%{% endif %}</td>
+                        <td class="text-right">{{ item.amount | inr if item.amount is not none else "" }}</td>
+                    </tr>
+                    {% endfor %}
+                    {# Pad with empty rows so the items area fills at least 10 rows #}
+                    {% for _ in range([10 - items|length, 0]|max) %}
+                    <tr class="pad">
+                        <td>&nbsp;</td><td></td><td></td><td></td>
+                        <td></td><td></td><td></td><td></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- AMOUNT IN WORDS + TOTALS -->
+        <div class="section-row">
+            <div class="col-half" style="vertical-align:bottom; display:flex; flex-direction:column; justify-content:flex-end;">
+                {% if totals.amount_in_words %}
+                <div class="bold" style="margin-bottom:4px;">Amount in Words:</div>
+                <div>INR {{ totals.amount_in_words }}</div>
+                {% endif %}
+            </div>
+            <div class="col-half" style="padding:0;">
+                <table class="totals-inner">
+                    {% if totals.taxable_value %}
+                    <tr>
+                        <td class="text-right">Taxable Value:</td>
+                        <td class="text-right bold">₹ {{ totals.taxable_value | inr }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if totals.igst %}
+                    <tr>
+                        <td class="text-right">IGST:</td>
+                        <td class="text-right bold">₹ {{ totals.igst | inr }}</td>
+                    </tr>
+                    {% else %}
+                    {% if totals.cgst is not none and totals.cgst %}
+                    <tr>
+                        <td class="text-right">CGST:</td>
+                        <td class="text-right bold">₹ {{ totals.cgst | inr }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if totals.sgst is not none and totals.sgst %}
+                    <tr>
+                        <td class="text-right">SGST:</td>
+                        <td class="text-right bold">₹ {{ totals.sgst | inr }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
+                    {% if totals.round_off %}
+                    <tr>
+                        <td class="text-right">Round Off:</td>
+                        <td class="text-right bold">₹ {{ totals.round_off | inr }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if totals.total_qty %}
+                    <tr>
+                        <td class="text-right">Total Qty:</td>
+                        <td class="text-right bold">{{ totals.total_qty }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr style="background:#f9f9f9;">
+                        <td class="text-right bold" style="font-size:13px;">TOTAL:</td>
+                        <td class="text-right bold" style="font-size:13px;">₹ {{ totals.grand_total | inr if totals.grand_total else "0.00" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- BANK + DECLARATIONS + SIGNATORY -->
+        <div class="section-row" style="border-bottom:none;">
+            <div class="col-half">
+                {% if bank and (bank.holder or bank.bank_name or bank.account_no or bank.ifsc) %}
+                <div class="bold" style="margin-bottom:5px;">BANK DETAILS</div>
+                <table class="info-grid" style="margin-bottom:12px;">
+                    {% if bank.holder %}<tr><td width="42%">Account Holder:</td><td class="bold">{{ bank.holder }}</td></tr>{% endif %}
+                    {% if bank.bank_name %}<tr><td>Bank Name:</td><td class="bold">{{ bank.bank_name }}</td></tr>{% endif %}
+                    {% if bank.account_no %}<tr><td>A/c No:</td><td class="bold">{{ bank.account_no }}</td></tr>{% endif %}
+                    {% if bank.branch %}<tr><td>Branch:</td><td class="bold">{{ bank.branch }}</td></tr>{% endif %}
+                    {% if bank.ifsc %}<tr><td>IFSC:</td><td class="bold">{{ bank.ifsc }}</td></tr>{% endif %}
+                </table>
+                {% endif %}
+
+                {% if declaration %}
+                <div style="margin-bottom:8px;">
+                    <span class="bold"><u>Declaration</u></span><br>
+                    {{ declaration }}
+                </div>
+                {% endif %}
+                {% if warranty_note %}
+                <div style="font-size:9px;">{{ warranty_note }}</div>
+                {% endif %}
+            </div>
+            <div class="col-half" style="text-align:right; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-end;">
+                <div>For <span class="bold">{{ signer_name or seller.name or "Authorised Signatory" }}</span></div>
+                {% if signature_image %}
+                <div style="margin:4px 0 6px 0; text-align:right;">
+                    <img src="{{ signature_image }}" style="max-height:50px; max-width:180px; object-fit:contain;" alt="Authorised Signature" />
+                </div>
+                {% else %}
+                <div style="height:40px;"></div>
+                {% endif %}
+                <div class="bold">Authorised Signatory</div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        {% if footer %}
+        <div class="footer-text">
+            {% for line in footer %}<div {% if loop.first %}style="font-weight:bold;"{% endif %}>{{ line }}</div>{% endfor %}
+        </div>
+        {% endif %}
+
+      </div><!-- /.invoice-outer -->
+    </div><!-- /.page-wrap -->
+</body>
+</html>

@@ -1,0 +1,91 @@
+name: DMS CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-tests:
+    name: Backend Tests & Quality
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dms_user
+          POSTGRES_PASSWORD: dms_password
+          POSTGRES_DB: dms_db
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install System Dependencies (OCR & Weasyprint)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr libtesseract-dev libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 poppler-utils
+
+      - name: Install Python Dependencies
+        run: |
+          cd backend
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Alembic Migrations
+        env:
+          DATABASE_URL: postgresql://dms_user:dms_password@localhost:5433/dms_db
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Run Pytest with Coverage
+        env:
+          DATABASE_URL: postgresql://dms_user:dms_password@localhost:5433/dms_db
+          APP_ENV: test
+          SECRET_KEY: test-secret-key-must-be-at-least-32-chars-long
+          JWT_AUDIENCE: dms-portal
+        run: |
+          cd backend
+          python seed.py
+          pytest --cov=app --cov-report=term-missing --cov-fail-under=60
+
+  frontend-build:
+    name: Frontend Build & Typecheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci || npm install
+
+      - name: Build Frontend Bundle
+        run: |
+          cd frontend
+          npm run build
