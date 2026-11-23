@@ -15,21 +15,52 @@ export default function BranchDashboardPage() {
     setTimeout(() => setToastMessage(null), 5000);
   };
 
+  const isCompanyAdmin =
+    user?.role === 'GLOBAL_ADMIN' ||
+    hasPermission('company.view') ||
+    hasPermission('document.view_company');
+  const isBranchAdmin = user?.role === 'ADMIN' || hasPermission('branch.view');
+
   useEffect(() => {
     if (!loading && user) {
-      if (!hasPermission('branch.view') && user.role !== 'ADMIN' && user.role !== 'GLOBAL_ADMIN') {
+      if (!isCompanyAdmin && !isBranchAdmin) {
         navigate('/documents', { replace: true });
         return;
       }
 
       api.listCompanyBranches()
         .then(data => {
-          if (Array.isArray(data)) setBranches(data);
-          else if (data?.items) setBranches(data.items);
+          const list = Array.isArray(data) ? data : (data?.items || []);
+          if (isCompanyAdmin) {
+            setBranches(list);
+          } else {
+            const authorizedIds = new Set();
+            if (user.branch_id) authorizedIds.add(Number(user.branch_id));
+            if (user.tenant_id) authorizedIds.add(Number(user.tenant_id));
+            if (Array.isArray(user.assigned_branch_ids)) {
+              user.assigned_branch_ids.forEach(id => authorizedIds.add(Number(id)));
+            }
+            if (Array.isArray(user.assignments)) {
+              user.assignments.forEach(a => {
+                if (a.scope_type === 'branch' && a.scope_id) {
+                  authorizedIds.add(Number(a.scope_id));
+                }
+              });
+            }
+            const filtered = list.filter(b => authorizedIds.has(Number(b.id)));
+            if (filtered.length === 0 && user.branch_id) {
+              filtered.push({
+                id: user.branch_id,
+                name: user.branch_name || user.tenant_name || 'Assigned Branch',
+                code: user.branch_code || 'BR',
+              });
+            }
+            setBranches(filtered);
+          }
         })
         .catch(() => {});
     }
-  }, [user, loading, hasPermission, navigate]);
+  }, [user, loading, isCompanyAdmin, isBranchAdmin, navigate]);
 
   if (loading) {
     return (
@@ -37,6 +68,11 @@ export default function BranchDashboardPage() {
         <div className="spinner" />
       </div>
     );
+  }
+
+  // Non-authorized roles should never see the dashboard page
+  if (!isCompanyAdmin && !isBranchAdmin) {
+    return null;
   }
 
   return (
@@ -61,6 +97,7 @@ export default function BranchDashboardPage() {
       )}
 
       <BranchDashboardView
+        branchId={user?.branch_id}
         branchesList={branches}
         showToast={showToast}
         onNavigateToDocs={() => navigate('/documents')}

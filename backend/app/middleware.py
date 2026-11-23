@@ -75,6 +75,13 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
             request_id,
         )
 
+        # Record operational telemetry metrics
+        try:
+            from app.services.metrics_service import metrics_service
+            metrics_service.record_http_request(request.method, path, response.status_code, elapsed_ms)
+        except Exception:
+            pass
+
         return response
 
 

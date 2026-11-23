@@ -845,6 +845,7 @@ def get_company_detail(
     ).scalar() or 0
 
     onboarding = db.query(CompanyOnboarding).filter(CompanyOnboarding.company_id == company.id).first()
+    rate = get_usd_to_inr_rate(db)
 
     return CompanyDetailOut(
         id=company.id,

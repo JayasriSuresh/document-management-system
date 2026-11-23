@@ -19,12 +19,22 @@ from app.auth.permissions import is_valid_permission
 PUBLIC_ALLOWLIST: Dict[str, str] = {
     # System & Documentation
     "GET:/health": "Liveness and health check endpoint for monitoring and deployment probes.",
+    "GET:/metrics": "Operational Prometheus metrics exposition endpoint for scrapers.",
+    "GET:/api/metrics": "Operational JSON metrics telemetry endpoint for dashboards.",
     "GET:/{full_path:path}": "Frontend SPA static file catchall serving React dist/index.html.",
     "HEAD:/{full_path:path}": "Frontend SPA static file HEAD request handler.",
     "GET:/openapi.json": "OpenAPI schema definition for API clients.",
     "GET:/docs": "Swagger UI interactive API documentation.",
     "GET:/docs/oauth2-redirect": "OAuth2 redirect helper for Swagger UI.",
     "GET:/redoc": "ReDoc documentation UI.",
+
+    # Public Media and Invoice Previews
+    "GET:/api/company/logo": "Public company logo retrieval for branding.",
+    "GET:/api/company/{company_id}/logo": "Public company logo retrieval by company ID.",
+    "GET:/api/sales-invoices/signatures/temp/{token}": "Public token-gated temporary signature preview.",
+    "GET:/api/sales-invoices/signatures/{sig_id}/image": "Signature image asset rendering.",
+    "GET:/api/sales-invoices/{invoice_id}/preview-page": "Invoice rendered HTML/page preview.",
+    "GET:/api/sales-invoices/drafts/{invoice_id}/preview-page": "Invoice draft rendered HTML/page preview.",
 
     # Identity & Public Workflows
     "POST:/api/auth/login": "Public entry point for user and administrator credential authentication.",

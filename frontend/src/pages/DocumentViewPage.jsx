@@ -737,6 +737,25 @@ export default function DocumentViewPage() {
                   {statusInfo.label}
                 </span>
               )}
+
+              {/* Invoice Type Badge */}
+              {doc.invoice_type && (
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    background: '#fef2f2',
+                    color: '#b91c1c',
+                    border: '1px solid #fecaca',
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {doc.invoice_type}
+                </span>
+              )}
             </div>
 
             <div className="doc-header-meta">
@@ -1109,7 +1128,7 @@ export default function DocumentViewPage() {
               <IconFileText />
               <span>Extracted Data</span>
               {Array.isArray(activeData.items) && activeData.items.length > 0 && (
-                <span className="doc-tab-badge">
+                <span className="doc-tab-badge" title={`${activeData.items.length} extracted line item${activeData.items.length === 1 ? '' : 's'}`}>
                   {activeData.items.length}
                 </span>
               )}
@@ -1133,10 +1152,16 @@ export default function DocumentViewPage() {
               }}
             >
               <IconCode2 />
-              <span>Raw OCR &amp; Audit</span>
+              <span>OCR &amp; Audit</span>
               {extraction?.edits_count > 0 && (
-                <span className="doc-tab-badge badge-edits">
-                  {extraction.edits_count} {extraction.edits_count === 1 ? 'edit' : 'edits'}
+                <span
+                  className="doc-tab-badge badge-edits"
+                  title={`${extraction.edits_count} manual edit${extraction.edits_count === 1 ? '' : 's'}`}
+                >
+                  {extraction.edits_count}
+                  <span className="tab-badge-text">
+                    {' '}{extraction.edits_count === 1 ? 'edit' : 'edits'}
+                  </span>
                 </span>
               )}
             </button>

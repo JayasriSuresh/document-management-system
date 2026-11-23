@@ -23,6 +23,7 @@ class InvoiceRepository(BaseTenantRepository[Invoice]):
         search: str = "",
         kind: str = "all",
         status: str = "all",
+        invoice_type: str = "all",
     ) -> List[Invoice]:
         """
         List invoices scoped to the current user's company and branch,
@@ -53,6 +54,10 @@ class InvoiceRepository(BaseTenantRepository[Invoice]):
         # 2. Status Filtering
         if status and status != "all":
             query = query.filter(Invoice.status == status)
+
+        # 2b. Invoice Type Filtering
+        if invoice_type and invoice_type != "all":
+            query = query.filter(Invoice.invoice_type == invoice_type)
 
         # 3. Staff / Uploader Access Rules
         if not (self.auth_context.is_global_admin or self.auth_context.role == UserRole.ADMIN):
@@ -160,6 +165,7 @@ class InvoiceRepository(BaseTenantRepository[Invoice]):
                     pdf_filename=pdf_file.name,
                     file_size=file_size,
                     created_at=doc.created_at,
+                    invoice_type=getattr(doc, "invoice_type", "Tax Invoice") or "Tax Invoice",
                 )
                 self.db.add(new_invoice)
                 self.db.commit()

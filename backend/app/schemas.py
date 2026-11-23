@@ -95,12 +95,32 @@ class MfaRegenerateRecoveryResponse(BaseModel):
 
 
 class CompanyMfaPolicyRequest(BaseModel):
-    mfa_required_for_all: bool
+    mfa_required_for_all: Optional[bool] = None
+    allow_branch_mfa_control: Optional[bool] = None
 
 
 class CompanyMfaPolicyResponse(BaseModel):
     company_id: int
     mfa_required_for_all: bool
+    allow_branch_mfa_control: bool
+
+
+class BranchMfaPolicyRequest(BaseModel):
+    mfa_required_for_all: bool
+
+
+class BranchMfaPolicyResponse(BaseModel):
+    branch_id: int
+    company_id: int
+    mfa_required_for_all: bool
+    effective_mfa_required: bool
+    is_locked_by_higher_policy: bool
+    lock_reason: Optional[str] = None
+
+
+class AdminMfaResetRequest(BaseModel):
+    reason: Optional[str] = "Admin-initiated MFA reset"
+    confirm_password: Optional[str] = None
 
 
 class PlatformMfaPolicyRequest(BaseModel):
@@ -327,6 +347,7 @@ class DocumentOut(BaseModel):
     snippet: Optional[str] = None
     thumbnail_url: Optional[str] = None
     file_url: Optional[str] = None
+    invoice_type: Optional[str] = "Tax Invoice"
 
     # Backward compatibility
     tenant_id: int
@@ -368,6 +389,7 @@ class DocumentListItem(BaseModel):
     snippet: Optional[str] = None
     thumbnail_url: Optional[str] = None
     file_url: Optional[str] = None
+    invoice_type: Optional[str] = "Tax Invoice"
 
     # Backward compatibility
     tenant_id: int
@@ -401,6 +423,7 @@ class SearchResultItem(BaseModel):
     snippet: Optional[str] = None
     thumbnail_url: str
     file_url: str
+    invoice_type: Optional[str] = "Tax Invoice"
 
     model_config = {"from_attributes": True}
 
@@ -421,6 +444,7 @@ class FileUploadResultItem(BaseModel):
     document: Optional[DocumentOut] = None
     error_code: Optional[str] = None
     error: Optional[str] = None
+    duplicate_document_id: Optional[int] = None
 
 
 class BatchUploadResponse(BaseModel):
@@ -468,6 +492,7 @@ class InvoiceOut(BaseModel):
     sgst_amount: Optional[str] = None
     igst_amount: Optional[str] = None
     round_off: Optional[str] = None
+    invoice_type: Optional[str] = "Tax Invoice"
 
     # Backward compatibility
     tenant_id: Optional[int] = None
@@ -855,9 +880,17 @@ class CompanyUserItem(BaseModel):
 class CompanyUsersPaginationResponse(BaseModel):
     items: List[CompanyUserItem]
     total_count: int
+    total: Optional[int] = None
     page: int
     page_size: int
     total_pages: int
+
+    def __init__(self, **data):
+        if "total" not in data and "total_count" in data:
+            data["total"] = data["total_count"]
+        elif "total_count" not in data and "total" in data:
+            data["total_count"] = data["total"]
+        super().__init__(**data)
 
 
 class CompanyUserInviteRequest(BaseModel):
@@ -877,6 +910,27 @@ class CompanyUserUpdateRequest(BaseModel):
     branch_id: Optional[int] = None
     primary_branch_id: Optional[int] = None
     additional_branch_ids: Optional[List[int]] = None
+
+
+class BranchUserInviteRequest(BaseModel):
+    name: str
+    email: str
+    role: str = "STAFF"
+    branch_id: Optional[int] = None
+    mobile: Optional[str] = None
+
+
+class BranchUserUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    mobile: Optional[str] = None
+
+
+class BranchSummaryOut(BaseModel):
+    id: int
+    name: str
+    code: str
+    status: str = "active"
 
 
 class CompanyInvitationItem(BaseModel):
@@ -1099,6 +1153,7 @@ class SalesInvoiceDraftCreate(BaseModel):
     terms_and_conditions: Optional[str] = None
     apply_round_off: bool = False
     series_code: str = "INV"
+    invoice_type: Optional[str] = "Tax Invoice"
     items: List[InvoiceItemInput] = []
     signatures: Optional[List[SignatureLayoutInput]] = None
 
@@ -1116,6 +1171,7 @@ class SalesInvoiceDraftUpdate(BaseModel):
     terms_and_conditions: Optional[str] = None
     apply_round_off: Optional[bool] = None
     series_code: Optional[str] = None
+    invoice_type: Optional[str] = None
     items: Optional[List[InvoiceItemInput]] = None
     signatures: Optional[List[SignatureLayoutInput]] = None
 

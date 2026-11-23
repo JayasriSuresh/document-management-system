@@ -12,6 +12,11 @@ export default function SecuritySettingsPage() {
     return <Navigate to="/admin?tab=settings" replace />;
   }
 
+  // Staff and Uploader accounts cannot manage security policies or self-enroll; redirect to documents
+  if (user?.role === 'STAFF' || user?.role === 'UPLOADER') {
+    return <Navigate to="/documents" replace />;
+  }
+
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,15 +38,25 @@ export default function SecuritySettingsPage() {
   const [regenLoading, setRegenLoading] = useState(false);
   const [copiedCodes, setCopiedCodes] = useState(false);
 
-  // Company MFA policy (if Company Admin)
+  // Role identification
   const isCompanyAdmin = user?.role === 'GLOBAL_ADMIN';
+  const isBranchAdmin = user?.role === 'ADMIN';
+  const isStaffOrUploader = user?.role === 'STAFF' || user?.role === 'UPLOADER';
+  const isAdminUser = isCompanyAdmin || isBranchAdmin || user?.role === 'MASTER_ADMIN';
+
+  // Company MFA policy (if Company Admin)
   const [companyPolicy, setCompanyPolicy] = useState(null);
   const [policyLoading, setPolicyLoading] = useState(false);
+
+  // Branch MFA policy (if Branch Admin)
+  const [branchPolicy, setBranchPolicy] = useState(null);
+  const [branchPolicyLoading, setBranchPolicyLoading] = useState(false);
 
   useEffect(() => {
     loadStatus();
     if (isCompanyAdmin) loadCompanyPolicy();
-  }, []);
+    if (isBranchAdmin && user?.branch_id) loadBranchPolicy();
+  }, [user]);
 
   const loadStatus = async () => {
     try {
@@ -63,11 +78,21 @@ export default function SecuritySettingsPage() {
     }
   };
 
+  const loadBranchPolicy = async () => {
+    if (!user?.branch_id) return;
+    try {
+      const res = await api.getBranchMfaPolicy(user.branch_id);
+      setBranchPolicy(res);
+    } catch {
+      // Ignore if not permitted
+    }
+  };
+
   const handleToggleCompanyPolicy = async (e) => {
     const val = e.target.checked;
     setPolicyLoading(true);
     try {
-      const updated = await api.updateCompanyMfaPolicy(val);
+      const updated = await api.updateCompanyMfaPolicy({ mfa_required_for_all: val });
       setCompanyPolicy(updated);
       setSuccess(`Company policy updated: MFA is now ${val ? 'mandatory' : 'optional'} for all company users.`);
       setTimeout(() => setSuccess(''), 5000);
@@ -76,6 +101,37 @@ export default function SecuritySettingsPage() {
       setError(err.message || 'Failed to update company policy.');
     } finally {
       setPolicyLoading(false);
+    }
+  };
+
+  const handleToggleBranchDelegation = async (e) => {
+    const val = e.target.checked;
+    setPolicyLoading(true);
+    try {
+      const updated = await api.updateCompanyMfaPolicy({ allow_branch_mfa_control: val });
+      setCompanyPolicy(updated);
+      setSuccess(`Branch delegation updated: Branch Administrators ${val ? 'can now' : 'can no longer'} manage branch MFA policies.`);
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.message || 'Failed to update branch delegation setting.');
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  const handleToggleBranchPolicy = async (e) => {
+    const val = e.target.checked;
+    setBranchPolicyLoading(true);
+    try {
+      const updated = await api.updateBranchMfaPolicy(user.branch_id, val);
+      setBranchPolicy(updated);
+      setSuccess(`Branch MFA policy updated: MFA is now ${val ? 'mandatory' : 'optional'} for this branch.`);
+      setTimeout(() => setSuccess(''), 5000);
+      loadStatus();
+    } catch (err) {
+      setError(err.message || 'Failed to update branch MFA policy.');
+    } finally {
+      setBranchPolicyLoading(false);
     }
   };
 
@@ -294,26 +350,32 @@ export default function SecuritySettingsPage() {
                     {status.remaining_recovery_codes} <span style={{ fontSize: '13px', fontWeight: 400, color: '#64748b' }}>of 8 codes</span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowRegenModal(true);
-                    setNewCodes([]);
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '8px',
-                    color: '#334155',
-                    cursor: 'pointer',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  Regenerate Codes
-                </button>
+                {isAdminUser ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRegenModal(true);
+                      setNewCodes([]);
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #cbd5e1',
+                      borderRadius: '8px',
+                      color: '#334155',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    }}
+                  >
+                    Regenerate Codes
+                  </button>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
+                    Contact your administrator if recovery codes need to be reset.
+                  </div>
+                )}
               </div>
 
               {status.mandatory && (
@@ -335,7 +397,7 @@ export default function SecuritySettingsPage() {
                 </div>
               )}
 
-              {!status.mandatory && (
+              {!status.mandatory && isAdminUser && (
                 <div style={{ paddingTop: '8px' }}>
                   {!showDisableForm ? (
                     <button
@@ -450,6 +512,38 @@ export default function SecuritySettingsPage() {
                 </div>
               )}
             </div>
+          ) : isStaffOrUploader ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>
+                Two-Factor Authentication (TOTP) is centrally managed by your organization's administrators.
+              </p>
+              {status?.mandatory ? (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #bfdbfe',
+                  color: '#1d4ed8',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <span>MFA is mandatory for your account. You will be prompted to complete setup upon your next sign in.</span>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
+                  borderRadius: '10px',
+                  fontSize: '13px',
+                }}>
+                  Voluntary self-enrollment is not permitted for staff accounts. Contact your branch administrator if you require MFA.
+                </div>
+              )}
+            </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <p style={{ fontSize: '13px', color: '#475569', margin: 0, lineHeight: 1.5 }}>
@@ -489,25 +583,98 @@ export default function SecuritySettingsPage() {
           padding: '24px',
           marginBottom: '24px',
         }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h2 style={{ fontSize: '17px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>
+                  Company MFA Enforcement Policy
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                  Require all employees and staff members across all branches of your enterprise to configure and use 2FA.
+                </p>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(companyPolicy?.mfa_required_for_all)}
+                  onChange={handleToggleCompanyPolicy}
+                  disabled={policyLoading}
+                  style={{ width: '20px', height: '20px', accentColor: '#2563eb', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                  {Boolean(companyPolicy?.mfa_required_for_all) ? 'Enforced' : 'Optional'}
+                </span>
+              </label>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px',
+              paddingTop: '16px',
+              borderTop: '1px solid #f1f5f9',
+            }}>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>
+                  Branch MFA Delegation
+                </h3>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                  Allow Branch Administrators to manage and mandate MFA policies for their assigned branches independently.
+                </p>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(companyPolicy?.allow_branch_mfa_control)}
+                  onChange={handleToggleBranchDelegation}
+                  disabled={policyLoading}
+                  style={{ width: '20px', height: '20px', accentColor: '#2563eb', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                  {Boolean(companyPolicy?.allow_branch_mfa_control) ? 'Delegated' : 'Disabled'}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2B. BRANCH ADMIN POLICY CARD ──────────────────────────────────── */}
+      {isBranchAdmin && user?.branch_id && (
+        <div style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '14px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          padding: '24px',
+          marginBottom: '24px',
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>
-                Company MFA Enforcement Policy
+                Branch MFA Policy
               </h2>
               <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-                Require all employees and staff members across all branches of your enterprise to configure and use 2FA.
+                Manage two-factor authentication requirement for all staff members assigned to your branch.
               </p>
+              {branchPolicy?.is_locked_by_higher_policy && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#b45309', fontWeight: 500 }}>
+                  Locked: {branchPolicy.lock_reason}
+                </div>
+              )}
             </div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: branchPolicy?.is_locked_by_higher_policy ? 'not-allowed' : 'pointer' }}>
               <input
                 type="checkbox"
-                checked={Boolean(companyPolicy?.mfa_required_for_all)}
-                onChange={handleToggleCompanyPolicy}
-                disabled={policyLoading}
-                style={{ width: '20px', height: '20px', accentColor: '#2563eb', cursor: 'pointer' }}
+                checked={Boolean(branchPolicy?.mfa_required_for_all)}
+                onChange={handleToggleBranchPolicy}
+                disabled={branchPolicyLoading || branchPolicy?.is_locked_by_higher_policy}
+                style={{ width: '20px', height: '20px', accentColor: '#2563eb', cursor: branchPolicy?.is_locked_by_higher_policy ? 'not-allowed' : 'pointer' }}
               />
               <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                {Boolean(companyPolicy?.mfa_required_for_all) ? 'Enforced' : 'Optional'}
+                {Boolean(branchPolicy?.mfa_required_for_all) ? 'Enforced' : 'Optional'}
               </span>
             </label>
           </div>

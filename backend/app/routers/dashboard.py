@@ -67,7 +67,19 @@ logger = logging.getLogger("dms.routers.dashboard")
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
-# ── Helper: Safe Date Boundary Parsing ───────────────────────────────────────
+# ── Helper: Safe Date Boundary Parsing & Timezone Handling ───────────────────
+
+def to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
+    """
+    Serializes a datetime to ISO-8601 with an explicit UTC indicator ('Z').
+    Ensures browser JavaScript parses it as UTC and converts to local browser time.
+    """
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 def parse_date_boundary(
     date_val: Optional[Union[str, date, datetime]],
@@ -660,15 +672,33 @@ def get_branch_dashboard(
         jobs_map[j_key] = j_count
         total_jobs += j_count
 
+    # Count unresolved failed jobs (where document is currently in FAILED status)
+    unresolved_failed_count = (
+        db.query(func.count(func.distinct(ProcessingJob.id)))
+        .outerjoin(Document, ProcessingJob.document_id == Document.id)
+        .filter(
+            ProcessingJob.company_id == auth_ctx.company_id,
+            ProcessingJob.branch_id == target_branch_id,
+            ProcessingJob.status == "failed",
+            or_(
+                Document.id.is_(None),
+                Document.ocr_status == OcrStatus.FAILED,
+            ),
+        )
+        .scalar()
+        or 0
+    )
+
     jobs_summary = {
         "total_jobs": total_jobs,
         "pending": jobs_map.get("pending", 0),
         "running": jobs_map.get("running", 0),
         "completed": jobs_map.get("completed", 0),
-        "failed": jobs_map.get("failed", 0),
+        "failed": unresolved_failed_count,
+        "historical_failed": jobs_map.get("failed", 0),
     }
 
-    # 7. Recent Failed Jobs (Top 5 with sanitized errors)
+    # 7. Recent Failed Jobs (Top 5 unresolved failures requiring attention)
     recent_failed_jobs = (
         db.query(ProcessingJob, Document)
         .outerjoin(Document, ProcessingJob.document_id == Document.id)
@@ -676,6 +706,10 @@ def get_branch_dashboard(
             ProcessingJob.company_id == auth_ctx.company_id,
             ProcessingJob.branch_id == target_branch_id,
             ProcessingJob.status == "failed",
+            or_(
+                Document.id.is_(None),
+                Document.ocr_status == OcrStatus.FAILED,
+            ),
         )
         .order_by(ProcessingJob.created_at.desc())
         .limit(5)
@@ -692,8 +726,8 @@ def get_branch_dashboard(
             "max_attempts": job.max_attempts,
             "error_code": job.error_code or "PROCESSING_FAILED",
             "error_summary": sanitize_error_message(job.last_error),
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
+            "created_at": to_utc_iso(job.created_at),
+            "updated_at": to_utc_iso(job.updated_at),
             "can_reprocess": bool(can_reprocess and (not doc or doc.deleted_at is None)),
         })
 
@@ -1104,9 +1138,9 @@ def get_dashboard_jobs(
             "max_attempts": job.max_attempts,
             "error_code": job.error_code or ("PROCESSING_FAILED" if job.status == "failed" else None),
             "error_summary": clean_error,
-            "created_at": job.created_at.isoformat() if job.created_at else None,
-            "updated_at": job.updated_at.isoformat() if job.updated_at else None,
-            "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+            "created_at": to_utc_iso(job.created_at),
+            "updated_at": to_utc_iso(job.updated_at),
+            "completed_at": to_utc_iso(job.completed_at),
             "can_reprocess": bool(can_reprocess and job.status == "failed" and not is_doc_deleted),
         })
 
@@ -1124,7 +1158,7 @@ def get_dashboard_jobs(
 # ── 5. SECURE CSV EXPORT ──────────────────────────────────────────────────────
 
 @router.get("/export/csv")
-@requires(COMPANY_VIEW)
+@requires(BRANCH_VIEW)
 def export_dashboard_csv(
     request: Request,
     export_type: str = Query(
@@ -1134,7 +1168,7 @@ def export_dashboard_csv(
     date_from: Optional[str] = Query(default=None, description="Start date (YYYY-MM-DD or ISO)"),
     date_to: Optional[str] = Query(default=None, description="End date (YYYY-MM-DD or ISO)"),
     branch_id: Optional[int] = Query(default=None, description="Optional branch ID filter"),
-    auth_ctx: AuthContext = Depends(require_permission(COMPANY_VIEW)),
+    auth_ctx: AuthContext = Depends(require_permission(BRANCH_VIEW)),
     db: Session = Depends(get_db),
 ):
     """
@@ -1151,7 +1185,24 @@ def export_dashboard_csv(
             detail=f"Invalid export_type '{export_type}'. Must be one of: {', '.join(valid_types)}",
         )
 
-    # Branch validation
+    has_company_view = (
+        auth_ctx.is_global_admin
+        or COMPANY_VIEW in auth_ctx.permissions
+        or DOCUMENT_VIEW_COMPANY in auth_ctx.permissions
+    )
+
+    # 1. Company vs Branch Scope Authorization
+    if branch_id is None:
+        if not has_company_view:
+            if auth_ctx.assigned_branch_ids and len(auth_ctx.assigned_branch_ids) == 1:
+                branch_id = auth_ctx.assigned_branch_ids[0]
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Permission denied: Missing required permission 'company.view' for company-wide exports. Please specify an authorized branch_id.",
+                )
+
+    # 2. Branch validation and authorization
     if branch_id is not None:
         target_branch = (
             db.query(Branch)
@@ -1163,6 +1214,13 @@ def export_dashboard_csv(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Branch #{branch_id} not found in this company.",
             )
+
+        if not has_company_view:
+            if branch_id not in auth_ctx.assigned_branch_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Permission denied: You are not authorized to export data for branch #{branch_id}.",
+                )
 
     start_dt = parse_date_boundary(date_from, is_end=False)
     end_dt = parse_date_boundary(date_to, is_end=True)

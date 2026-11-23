@@ -5,12 +5,13 @@ const API_BASE = '';
  * Custom error class preserving HTTP status and backend Request ID.
  */
 export class ApiError extends Error {
-  constructor(message, status, requestId = null, raw = null) {
+  constructor(message, status, requestId = null, raw = null, headers = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.requestId = requestId;
     this.raw = raw;
+    this.headers = headers;
   }
 }
 
@@ -76,6 +77,87 @@ function getLoginRedirectForCurrentPath() {
   if (path.startsWith('/admin')) return '/admin/login';
   if (path.startsWith('/company')) return '/company/login';
   return '/login';
+}
+
+function sanitizeErrorMessage(detail, status) {
+  if (!detail) {
+    if (status === 400) return 'Invalid request. Please verify the submitted information.';
+    if (status === 401) return 'Session expired or unauthorized. Please sign in again.';
+    if (status === 403) return 'Permission denied: You do not have permission to perform this action.';
+    if (status === 404) return 'The requested resource was not found.';
+    if (status >= 500) return 'A server error occurred. Please try again later.';
+    return 'An error occurred while processing your request.';
+  }
+
+  // Handle array of validation errors (e.g. FastAPI / Pydantic)
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const msg = item.msg || '';
+          if (
+            msg.includes('model_attributes_type') ||
+            msg.includes('valid dictionary or object') ||
+            msg.includes('JSON decode error')
+          ) {
+            return 'Invalid input format';
+          }
+          const field = Array.isArray(item.loc) && item.loc.length > 0 ? item.loc[item.loc.length - 1] : null;
+          if (field && field !== 'body') {
+            const cleanFieldName = String(field).replace(/_/g, ' ');
+            return `${cleanFieldName}: ${msg}`;
+          }
+          return msg;
+        }
+        return '';
+      })
+      .filter(Boolean);
+
+    if (messages.length > 0) {
+      return messages.join('. ');
+    }
+    return 'Invalid information provided. Please check the form fields.';
+  }
+
+  // Handle nested object
+  if (typeof detail === 'object') {
+    if (detail.message && typeof detail.message === 'string') {
+      return sanitizeErrorMessage(detail.message, status);
+    }
+    if (detail.detail) {
+      return sanitizeErrorMessage(detail.detail, status);
+    }
+    return sanitizeErrorMessage(null, status);
+  }
+
+  let str = String(detail).trim();
+
+  // If string contains a JSON array or object, parse and re-sanitize
+  if (str.startsWith('[') || str.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(str);
+      return sanitizeErrorMessage(parsed, status);
+    } catch {
+      // Not valid JSON, continue with string sanitization
+    }
+  }
+
+  // Hide internal exceptions, stack traces, database and framework details
+  if (
+    str.includes('Traceback') ||
+    str.includes('Internal Server Error') ||
+    str.includes('psycopg2') ||
+    str.includes('IntegrityError') ||
+    str.includes('model_attributes_type') ||
+    str.includes('syntax error') ||
+    str.includes('FastAPI') ||
+    str.includes('SQLAlchemy')
+  ) {
+    return 'A server error occurred. Please try again later.';
+  }
+
+  return str;
 }
 
 async function handleResponse(res, originalRequest = null) {
@@ -156,18 +238,19 @@ async function handleResponse(res, originalRequest = null) {
     try {
       rawPayload = await res.json();
       if (rawPayload?.error?.detail) {
-        errorDetail = rawPayload.error.detail;
+        errorDetail = sanitizeErrorMessage(rawPayload.error.detail, res.status);
       } else if (rawPayload?.detail) {
-        errorDetail =
-          typeof rawPayload.detail === 'string'
-            ? rawPayload.detail
-            : JSON.stringify(rawPayload.detail);
+        errorDetail = sanitizeErrorMessage(rawPayload.detail, res.status);
+      } else if (rawPayload?.message) {
+        errorDetail = sanitizeErrorMessage(rawPayload.message, res.status);
+      } else {
+        errorDetail = sanitizeErrorMessage(null, res.status);
       }
     } catch {
-      errorDetail = `Request failed with status ${res.status}`;
+      errorDetail = sanitizeErrorMessage(null, res.status);
     }
 
-    throw new ApiError(errorDetail, res.status, requestId, rawPayload);
+    throw new ApiError(errorDetail, res.status, requestId, rawPayload, res.headers);
   }
 
   return res.json();
@@ -324,6 +407,7 @@ export const api = {
       if (params.amountMin) url.searchParams.set('amount_min', params.amountMin);
       if (params.amountMax) url.searchParams.set('amount_max', params.amountMax);
       if (params.documentType) url.searchParams.set('document_type', params.documentType);
+      if (params.invoiceType) url.searchParams.set('invoice_type', params.invoiceType);
       if (params.includeDeleted) url.searchParams.set('include_deleted', 'true');
       if (params.paginate) url.searchParams.set('paginate', 'true');
     }
@@ -347,6 +431,7 @@ export const api = {
       if (params.branchId) url.searchParams.set('branch_id', params.branchId);
       if (params.status) url.searchParams.set('status', params.status);
       if (params.documentType) url.searchParams.set('document_type', params.documentType);
+      if (params.invoiceType) url.searchParams.set('invoice_type', params.invoiceType);
       if (params.includeDeleted) url.searchParams.set('include_deleted', 'true');
       if (params.page !== undefined) url.searchParams.set('page', params.page);
       if (params.pageSize !== undefined) url.searchParams.set('page_size', params.pageSize);
@@ -358,22 +443,26 @@ export const api = {
     return wrappedFetch(`${API_BASE}/api/documents/${id}`, { headers: getHeaders() });
   },
 
-  uploadDocument: async (file) => {
+  uploadDocument: async (file, allowDuplicate = false, invoiceType = 'Tax Invoice') => {
     const formData = new FormData();
     formData.append('file', file);
-    return wrappedFetch(`${API_BASE}/api/documents`, {
+    if (invoiceType) formData.append('invoice_type', invoiceType);
+    const query = allowDuplicate === true ? '?allow_duplicate=true' : '';
+    return wrappedFetch(`${API_BASE}/api/documents${query}`, {
       method: 'POST',
       headers: getHeaders(true),
       body: formData,
     });
   },
 
-  uploadDocuments: async (files) => {
+  uploadDocuments: async (files, allowDuplicate = false, invoiceType = 'Tax Invoice') => {
     const formData = new FormData();
     for (const f of files) {
       formData.append('files', f);
     }
-    return wrappedFetch(`${API_BASE}/api/documents/batch`, {
+    if (invoiceType) formData.append('invoice_type', invoiceType);
+    const query = allowDuplicate === true ? '?allow_duplicate=true' : '';
+    return wrappedFetch(`${API_BASE}/api/documents/batch${query}`, {
       method: 'POST',
       headers: getHeaders(true),
       body: formData,
@@ -428,6 +517,8 @@ export const api = {
       if (params.search) url.searchParams.set('search', params.search);
       if (params.kind) url.searchParams.set('kind', params.kind);
       if (params.status) url.searchParams.set('status', params.status);
+      if (params.invoice_type && params.invoice_type !== 'all') url.searchParams.set('invoice_type', params.invoice_type);
+      if (params.invoiceType && params.invoiceType !== 'all') url.searchParams.set('invoice_type', params.invoiceType);
       if (params.page) url.searchParams.set('page', params.page);
       if (params.limit) url.searchParams.set('limit', params.limit);
     }
@@ -1102,11 +1193,43 @@ export const api = {
     });
   },
 
-  updateCompanyMfaPolicy: async (mfaRequiredForAll) => {
+  updateCompanyMfaPolicy: async (payloadOrRequired, allowBranchMfaControl) => {
+    let body = {};
+    if (typeof payloadOrRequired === 'object' && payloadOrRequired !== null) {
+      body = payloadOrRequired;
+    } else {
+      if (payloadOrRequired !== undefined) body.mfa_required_for_all = payloadOrRequired;
+      if (allowBranchMfaControl !== undefined) body.allow_branch_mfa_control = allowBranchMfaControl;
+    }
     return wrappedFetch(`${API_BASE}/api/company/security/mfa-policy`, {
       method: 'POST',
       headers: getHeaders(),
+      body: JSON.stringify(body),
+    });
+  },
+
+  getBranchMfaPolicy: async (branchId) => {
+    return wrappedFetch(`${API_BASE}/api/branch/${branchId}/security/mfa-policy`, {
+      headers: getHeaders(),
+    });
+  },
+
+  updateBranchMfaPolicy: async (branchId, mfaRequiredForAll) => {
+    return wrappedFetch(`${API_BASE}/api/branch/${branchId}/security/mfa-policy`, {
+      method: 'POST',
+      headers: getHeaders(),
       body: JSON.stringify({ mfa_required_for_all: mfaRequiredForAll }),
+    });
+  },
+
+  branchResetUserMfa: async (userId, confirmPassword = null, reason = null) => {
+    return wrappedFetch(`${API_BASE}/api/branch/users/${userId}/reset-mfa`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        confirm_password: confirmPassword,
+        reason: reason || 'Branch Admin Reset',
+      }),
     });
   },
 
@@ -1415,5 +1538,77 @@ export const api = {
 
   downloadDocumentCopyPdf: async (docId, version, filename) => {
     return api.downloadBlobUrl(`${API_BASE}/api/documents/${docId}/copies/${version}/pdf?download=true`, filename || `copy_v${version}.pdf`);
+  },
+
+  // ── Branch User Management API ─────────────────────────────────────────────
+  getBranchAuthorizedBranches: async () => {
+    return wrappedFetch(`${API_BASE}/api/branch/branches`, {
+      headers: getHeaders(),
+    });
+  },
+
+  getBranchUsers: async ({ page = 1, pageSize = 25, branchId = null, role = null, status = null, search = '' } = {}) => {
+    const params = new URLSearchParams();
+    params.set('page', page);
+    params.set('page_size', pageSize);
+    if (branchId) params.set('branch_id', branchId);
+    if (role) params.set('role', role);
+    if (status) params.set('status', status);
+    if (search && search.trim()) params.set('search', search.trim());
+    return wrappedFetch(`${API_BASE}/api/branch/users?${params.toString()}`, {
+      headers: getHeaders(),
+    });
+  },
+
+  inviteBranchUser: async (payload) => {
+    return wrappedFetch(`${API_BASE}/api/branch/users/invite`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateBranchUser: async (userId, payload) => {
+    return wrappedFetch(`${API_BASE}/api/branch/users/${userId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deactivateBranchUser: async (userId) => {
+    return wrappedFetch(`${API_BASE}/api/branch/users/${userId}/deactivate`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+  },
+
+  activateBranchUser: async (userId) => {
+    return wrappedFetch(`${API_BASE}/api/branch/users/${userId}/activate`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+  },
+
+  getBranchInvitations: async ({ branchId = null } = {}) => {
+    const params = new URLSearchParams();
+    if (branchId) params.set('branch_id', branchId);
+    return wrappedFetch(`${API_BASE}/api/branch/invitations?${params.toString()}`, {
+      headers: getHeaders(),
+    });
+  },
+
+  resendBranchInvitation: async (invitationId) => {
+    return wrappedFetch(`${API_BASE}/api/branch/invitations/${invitationId}/resend`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+  },
+
+  revokeBranchInvitation: async (invitationId) => {
+    return wrappedFetch(`${API_BASE}/api/branch/invitations/${invitationId}/revoke`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
   },
 };

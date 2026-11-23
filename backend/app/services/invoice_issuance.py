@@ -569,6 +569,7 @@ def create_sales_invoice_draft(
         seller_gstin=gst_reg.gstin,
         buyer_name=customer.name,
         buyer_gstin=customer.gstin,
+        invoice_type=getattr(draft_data, "invoice_type", None) or "Tax Invoice",
     )
     db.add(invoice)
     db.flush()
@@ -731,6 +732,9 @@ def update_sales_invoice_draft(
 
     if update_data.notes is not None:
         invoice.notes = update_data.notes
+
+    if update_data.invoice_type is not None:
+        invoice.invoice_type = update_data.invoice_type
 
     # Recalculate line items if provided
     if update_data.items is not None:

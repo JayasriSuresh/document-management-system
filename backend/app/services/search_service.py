@@ -166,6 +166,7 @@ class DocumentSearchService:
         branch_id: Optional[int] = None,
         status: Optional[str] = None,
         document_type: Optional[str] = None,
+        invoice_type: Optional[str] = None,
         include_deleted: bool = False,
         page: int = 1,
         page_size: int = 20,
@@ -231,21 +232,32 @@ class DocumentSearchService:
             query = query.filter(Document.ocr_status == norm_status)
             filters_applied["status"] = norm_status
 
+        # 4b. Invoice Type Filter
+        if invoice_type and invoice_type.strip() and invoice_type.strip().lower() != "all":
+            it = invoice_type.strip()
+            query = query.filter(Document.invoice_type == it)
+            filters_applied["invoice_type"] = it
+
         # 5. Document Type / Mime Type Filter
         if document_type:
-            dt = document_type.strip().lower()
-            filters_applied["document_type"] = dt
-            if dt in ("pdf", "application/pdf"):
-                query = query.filter(Document.mime_type == "application/pdf")
-            elif dt in ("image", "img", "jpeg", "jpg", "png"):
-                query = query.filter(Document.mime_type.ilike("image/%"))
+            dt = document_type.strip()
+            if dt.lower() in ("tax invoice", "invoice", "bill of supply", "cash memo", "retail invoice", "export invoice", "proforma invoice", "credit note", "debit note", "receipt voucher", "payment voucher", "refund voucher", "revised invoice", "delivery challan", "other"):
+                query = query.filter(Document.invoice_type.ilike(dt))
+                filters_applied["invoice_type"] = dt
             else:
-                query = query.filter(
-                    or_(
-                        Document.mime_type.ilike(f"%{dt}%"),
-                        Document.original_filename.ilike(f"%.{dt}"),
+                dt_low = dt.lower()
+                filters_applied["document_type"] = dt_low
+                if dt_low in ("pdf", "application/pdf"):
+                    query = query.filter(Document.mime_type == "application/pdf")
+                elif dt_low in ("image", "img", "jpeg", "jpg", "png"):
+                    query = query.filter(Document.mime_type.ilike("image/%"))
+                else:
+                    query = query.filter(
+                        or_(
+                            Document.mime_type.ilike(f"%{dt_low}%"),
+                            Document.original_filename.ilike(f"%.{dt_low}"),
+                        )
                     )
-                )
 
         # 6. Date Range Filters (Evaluates invoice_date or fallback created_at::date)
         parsed_date_from = parse_indian_date(date_from)
@@ -403,6 +415,7 @@ class DocumentSearchService:
                 "invoice_amount": float(doc.grand_total) if doc.grand_total is not None else None,
                 "grand_total": float(doc.grand_total) if doc.grand_total is not None else None,
                 "currency": doc.currency or "INR",
+                "invoice_type": doc.invoice_type or "Tax Invoice",
                 "snippet": snippet,
                 "thumbnail_url": f"/api/documents/{doc.id}/thumbnail",
                 "file_url": f"/api/documents/{doc.id}/file",

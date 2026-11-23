@@ -1754,6 +1754,8 @@ def update_company_user(
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found in your company.")
 
+    was_mfa_mandatory = MfaService.is_mfa_mandatory_for_user(db, target_user)
+
     # 1. Privilege Escalation Check
     if payload.role:
         raw_role = payload.role.strip().upper()
@@ -1840,12 +1842,18 @@ def update_company_user(
                     ))
 
     # Invalidate active sessions immediately on role or branch scope modifications
+    is_mfa_mandatory_now = MfaService.is_mfa_mandatory_for_user(db, target_user)
     if payload.role is not None or payload.branch_id is not None or payload.additional_branch_ids is not None:
+        revocation_reason = (
+            "mfa_policy_mandated_by_assignment_change"
+            if (not was_mfa_mandatory and is_mfa_mandatory_now)
+            else "role_or_scope_updated_by_admin"
+        )
         session_service.revoke_all_sessions(
             db=db,
             identity_type="user",
             identity_id=target_user.id,
-            reason="role_or_scope_updated_by_admin",
+            reason=revocation_reason,
         )
 
     audit.record_event(

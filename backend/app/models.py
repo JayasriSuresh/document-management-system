@@ -32,6 +32,7 @@ class UserRole(str, enum.Enum):
     GLOBAL_ADMIN = "GLOBAL_ADMIN"
     ADMIN = "ADMIN"
     STAFF = "STAFF"
+    UPLOADER = "UPLOADER"
 
 
 class OcrStatus(str, enum.Enum):
@@ -84,6 +85,7 @@ class Company(Base):
     address = Column(Text, nullable=True)
     limits = Column(JSON, nullable=True, default=dict)
     mfa_required_for_all = Column(Boolean, nullable=False, default=False)
+    allow_branch_mfa_control = Column(Boolean, nullable=False, default=False)
 
     # ── Quotas & Resource Allocation ──────────────────────────────────────────
     max_branches = Column(Integer, nullable=False, default=5)
@@ -148,6 +150,7 @@ class Branch(Base):
 
     # ── Status ────────────────────────────────────────────────────────────────
     status = Column(String(32), nullable=True, default="active")
+    mfa_required_for_all = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -345,6 +348,7 @@ class Document(Base):
 
     # Module 13 Expense Category
     category_id = Column(Integer, ForeignKey("expense_categories.id", ondelete="SET NULL"), nullable=True)
+    invoice_type = Column(String(64), nullable=True, default="Tax Invoice", index=True)
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -362,10 +366,9 @@ class Document(Base):
         Index("ix_documents_company_status", "company_id", "ocr_status"),
         Index("ix_documents_search_vector", "search_vector", postgresql_using="gin"),
         Index(
-            "uq_documents_company_sha256_active",
+            "ix_documents_company_sha256_active",
             "company_id",
             "sha256",
-            unique=True,
             postgresql_where=text("deleted_at IS NULL AND sha256 IS NOT NULL"),
         ),
     )
@@ -434,6 +437,7 @@ class Invoice(Base):
     grand_total = Column(Numeric(15, 2), nullable=True)
     currency = Column(String(32), default="INR")
     notes = Column(Text, nullable=True)
+    invoice_type = Column(String(64), nullable=True, default="Tax Invoice", index=True)
 
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

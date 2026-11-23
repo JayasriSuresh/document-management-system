@@ -51,6 +51,7 @@ class DocumentRepository(BaseTenantRepository[Document]):
         sha256: Optional[str] = None,
         page_count: Optional[int] = None,
         error_code: Optional[str] = None,
+        invoice_type: Optional[str] = "Tax Invoice",
         commit: bool = True,
     ) -> Document:
         """
@@ -80,6 +81,7 @@ class DocumentRepository(BaseTenantRepository[Document]):
             page_count=page_count,
             error_code=error_code,
             ocr_status=OcrStatus.UPLOADED,
+            invoice_type=invoice_type or "Tax Invoice",
         )
         self.db.add(doc)
         if commit:
@@ -163,6 +165,7 @@ class DocumentRepository(BaseTenantRepository[Document]):
         branch_id: Optional[int] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        invoice_type: Optional[str] = None,
         include_deleted: bool = False,
     ):
         """
@@ -173,6 +176,10 @@ class DocumentRepository(BaseTenantRepository[Document]):
 
         if include_deleted:
             query = query.filter(Document.deleted_at.isnot(None))
+
+        # Invoice type filter
+        if invoice_type and invoice_type.strip() and invoice_type.strip().lower() != "all":
+            query = query.filter(Document.invoice_type == invoice_type.strip())
 
         # Branch filter
         if branch_id is not None:

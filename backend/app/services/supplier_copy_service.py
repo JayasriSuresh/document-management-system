@@ -268,11 +268,14 @@ def regenerate_supplier_copy(
             currency="INR",
             pdf_filename=filename,
             file_size=len(pdf_bytes),
+            invoice_type=getattr(doc, "invoice_type", None) or "Tax Invoice",
         )
         db.add(parent_invoice)
         db.flush()
     else:
         parent_invoice.pdf_filename = filename
+        if getattr(doc, "invoice_type", None):
+            parent_invoice.invoice_type = doc.invoice_type
         parent_invoice.file_size = len(pdf_bytes)
         parent_invoice.status = "available"
         parent_invoice.updated_at = datetime.now(timezone.utc)

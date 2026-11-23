@@ -637,6 +637,17 @@ def test_csv_export_authorization(client, auth_headers, module14_test_data):
     resp_staff = client.get("/api/dashboard/export/csv?export_type=ai-usage", headers=staff_headers)
     assert resp_staff.status_code == 403
 
+    # Branch Admin succeeds for assigned branch
+    branch_admin_headers = auth_headers(module14_test_data["admin_branch_email"])
+    branch_a1_id = module14_test_data["branch_a1_id"]
+    branch_a2_id = module14_test_data["branch_a2_id"]
+    resp_branch = client.get(f"/api/dashboard/export/csv?export_type=failed-jobs&branch_id={branch_a1_id}", headers=branch_admin_headers)
+    assert resp_branch.status_code == 200
+
+    # Branch Admin is rejected for an unauthorized branch
+    resp_unauth_branch = client.get(f"/api/dashboard/export/csv?export_type=failed-jobs&branch_id={branch_a2_id}", headers=branch_admin_headers)
+    assert resp_unauth_branch.status_code == 403
+
     # Invalid export type returns 400
     resp_inv = client.get("/api/dashboard/export/csv?export_type=unsupported", headers=admin_headers)
     assert resp_inv.status_code == 400

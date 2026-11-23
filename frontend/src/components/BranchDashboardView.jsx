@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 
@@ -25,6 +25,17 @@ function formatUSD(amount) {
   return `$${Number(amount).toFixed(4)}`;
 }
 
+function formatDateTime(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const str = String(dateStr).trim();
+    const normalized = (!str.endsWith('Z') && !str.includes('+')) ? `${str}Z` : str;
+    return new Date(normalized).toLocaleString();
+  } catch {
+    return String(dateStr);
+  }
+}
+
 export default function BranchDashboardView({
   branchId: initialBranchId = null,
   branchesList: propBranchesList = null,
@@ -32,6 +43,31 @@ export default function BranchDashboardView({
   onNavigateToDocs = null,
 }) {
   const { user, hasPermission } = useAuth();
+
+  const isCompanyAdmin =
+    user?.role === 'GLOBAL_ADMIN' ||
+    hasPermission('company.view') ||
+    hasPermission('document.view_company');
+
+  // Compute authorized branch IDs for the current user
+  const authorizedBranchIds = useMemo(() => {
+    if (!user) return [];
+    if (isCompanyAdmin) return null; // null indicates unrestricted company-wide access
+    const ids = new Set();
+    if (user.branch_id) ids.add(Number(user.branch_id));
+    if (user.tenant_id) ids.add(Number(user.tenant_id));
+    if (Array.isArray(user.assigned_branch_ids)) {
+      user.assigned_branch_ids.forEach((id) => ids.add(Number(id)));
+    }
+    if (Array.isArray(user.assignments)) {
+      user.assignments.forEach((a) => {
+        if (a.scope_type === 'branch' && a.scope_id) {
+          ids.add(Number(a.scope_id));
+        }
+      });
+    }
+    return Array.from(ids);
+  }, [user, isCompanyAdmin]);
 
   // Branch Selection State
   const [branches, setBranches] = useState([]);
@@ -48,36 +84,63 @@ export default function BranchDashboardView({
   const [error, setError] = useState('');
   const [exportingReport, setExportingReport] = useState(null);
   const [reprocessingJobId, setReprocessingJobId] = useState(null);
+  const [dismissedFailureAlert, setDismissedFailureAlert] = useState(false);
 
-  // Load available branches for selector
+  // Load available branches for selector with strict authorization filtering
   useEffect(() => {
-    if (propBranchesList && propBranchesList.length > 0) {
-      setBranches(propBranchesList);
-      if (!selectedBranchId) {
-        setSelectedBranchId(initialBranchId || propBranchesList[0]?.id);
+    const processBranches = (rawList) => {
+      const list = Array.isArray(rawList) ? rawList : (rawList?.items || []);
+      const filtered = isCompanyAdmin
+        ? list
+        : list.filter((b) => authorizedBranchIds?.includes(Number(b.id)));
+
+      // If user has a branch_id but it was not returned by list, synthesize a fallback entry
+      if (!isCompanyAdmin && filtered.length === 0 && user?.branch_id) {
+        filtered.push({
+          id: user.branch_id,
+          name: user.branch_name || user.tenant_name || 'Assigned Branch',
+          code: user.branch_code || 'BR',
+        });
       }
+
+      setBranches(filtered);
+
+      // Determine initial/default selected branch
+      // Priority:
+      // 1. If current selection is valid and authorized, retain it
+      // 2. If initialBranchId is valid and authorized, use it
+      // 3. User's own branch_id
+      // 4. First authorized branch in list
+      setSelectedBranchId((currentId) => {
+        const isCurrentValid = currentId && (isCompanyAdmin || authorizedBranchIds?.includes(Number(currentId)));
+        if (isCurrentValid) return currentId;
+
+        if (initialBranchId && (isCompanyAdmin || authorizedBranchIds?.includes(Number(initialBranchId)))) {
+          return Number(initialBranchId);
+        }
+        if (user?.branch_id && (isCompanyAdmin || authorizedBranchIds?.includes(Number(user.branch_id)))) {
+          return Number(user.branch_id);
+        }
+        return filtered[0]?.id || null;
+      });
+    };
+
+    if (propBranchesList && propBranchesList.length > 0) {
+      processBranches(propBranchesList);
       return;
     }
 
     const fetchBranches = async () => {
       try {
         const res = await api.listCompanyBranches();
-        const list = Array.isArray(res) ? res : (res?.items || []);
-        setBranches(list);
-
-        if (!selectedBranchId && list.length > 0) {
-          // If user has assigned_branch_ids, select the first match
-          const userBranchId = user?.assigned_branch_ids?.[0];
-          const matched = list.find(b => b.id === userBranchId) || list[0];
-          setSelectedBranchId(initialBranchId || matched.id);
-        }
+        processBranches(res);
       } catch (err) {
         console.error('Failed to load branches:', err);
       }
     };
 
     fetchBranches();
-  }, [propBranchesList, initialBranchId, user]);
+  }, [propBranchesList, initialBranchId, user, isCompanyAdmin, authorizedBranchIds]);
 
   // Compute UTC date strings for query params
   const calculateDateRange = useCallback(() => {
@@ -106,6 +169,13 @@ export default function BranchDashboardView({
   const loadDashboard = useCallback(async () => {
     if (!selectedBranchId) return;
 
+    // Authorization safeguard: never request an unauthorized branch
+    if (!isCompanyAdmin && authorizedBranchIds && !authorizedBranchIds.includes(Number(selectedBranchId))) {
+      setError('You are not authorized to view metrics for this branch.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -120,10 +190,11 @@ export default function BranchDashboardView({
     } finally {
       setLoading(false);
     }
-  }, [selectedBranchId, calculateDateRange]);
+  }, [selectedBranchId, calculateDateRange, isCompanyAdmin, authorizedBranchIds]);
 
   useEffect(() => {
     if (selectedBranchId) {
+      setDismissedFailureAlert(false);
       loadDashboard();
     }
   }, [selectedBranchId, loadDashboard]);
@@ -466,19 +537,22 @@ export default function BranchDashboardView({
       {data && (
         <>
           {/* Failed Background Jobs Alert Banner */}
-          {jobs.failed > 0 && (
-            <div style={{
-              backgroundColor: '#fff1f2',
-              border: '1px solid #fecdd3',
-              borderRadius: '10px',
-              padding: '14px 20px',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-            }}>
+          {jobs.failed > 0 && recent_failed_jobs.length > 0 && !dismissedFailureAlert && (
+            <div
+              role="alert"
+              style={{
+                backgroundColor: '#fff1f2',
+                border: '1px solid #fecdd3',
+                borderRadius: '10px',
+                padding: '14px 20px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   width: '32px',
@@ -505,28 +579,85 @@ export default function BranchDashboardView({
                 </div>
               </div>
 
-              <button
-                onClick={() => handleExportCsv('failed-jobs')}
-                disabled={exportingReport !== null}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '6px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #fecdd3',
-                  color: '#9f1239',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: exportingReport ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Export Failed Jobs
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('recent-job-diagnostics');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fecdd3',
+                    color: '#9f1239',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  View Diagnostics ↓
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportCsv('failed-jobs')}
+                  disabled={exportingReport !== null}
+                  style={{
+                    padding: '7px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fecdd3',
+                    color: '#9f1239',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: exportingReport ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Export Failed Jobs
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDismissedFailureAlert(true)}
+                  aria-label="Dismiss failure alert"
+                  title="Close alert"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #fecdd3',
+                    backgroundColor: '#ffffff',
+                    color: '#9f1239',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    transition: 'all 0.15s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           )}
 
@@ -867,7 +998,9 @@ export default function BranchDashboardView({
           </div>
 
           {/* ── Recent Failed Background Jobs Diagnostic ──────────────── */}
-          <div style={{
+          <div
+            id="recent-job-diagnostics"
+            style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
             borderRadius: '12px',
@@ -968,7 +1101,7 @@ export default function BranchDashboardView({
                           </div>
                         </td>
                         <td style={{ padding: '12px', color: '#64748b', fontSize: '12px' }}>
-                          {job.updated_at ? new Date(job.updated_at).toLocaleString() : '—'}
+                          {formatDateTime(job.updated_at)}
                         </td>
                         <td style={{ padding: '12px', textAlign: 'right' }}>
                           {job.can_reprocess && job.document_id ? (

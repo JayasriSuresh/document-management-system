@@ -51,10 +51,10 @@ class InvitationService:
         Create a new invitation scoped strictly to the inviter's company.
         """
         # 1. Permission checks
-        if auth.role == UserRole.STAFF:
+        if auth.role in (UserRole.STAFF, UserRole.UPLOADER) or not (auth.is_global_admin or auth.role == UserRole.ADMIN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Staff members are not authorized to issue user invitations.",
+                detail="Staff members and Uploaders are not authorized to issue user invitations.",
             )
 
         # 2. Prevent role escalation
@@ -63,12 +63,21 @@ class InvitationService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Branch Admins cannot invite Global Admins.",
             )
-
-        # 3. Branch admin can only invite to their own branch
-        if auth.role == UserRole.ADMIN and branch_id != auth.branch_id:
+        if auth.role == UserRole.ADMIN and invited_role == UserRole.ADMIN:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Branch Admins can only invite users to their own branch.",
+                detail="Branch Admins cannot invite other Branch Admins. Only Staff and Uploader accounts are allowed.",
+            )
+
+        # 3. Branch admin can only invite to their authorized branches
+        authorized_branches = {auth.branch_id}
+        for a in auth.assignments:
+            if isinstance(a, dict) and a.get("scope_type") == "branch" and a.get("scope_id") and a.get("role") in ("ADMIN", "GLOBAL_ADMIN"):
+                authorized_branches.add(int(a["scope_id"]))
+        if auth.role == UserRole.ADMIN and branch_id not in authorized_branches:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Branch Admins can only invite users to their authorized branches.",
             )
 
         # 4. Enforce company boundary on branch

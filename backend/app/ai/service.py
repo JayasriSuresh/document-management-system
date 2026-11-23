@@ -103,6 +103,7 @@ class AIExecutionService:
                     is_retryable=False,
                 )
 
+        db.commit()
         return company
 
     @classmethod

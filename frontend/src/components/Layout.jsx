@@ -343,6 +343,16 @@ export default function Layout() {
             </NavLink>
           )}
 
+          {isBranchAdmin && (
+            <NavLink
+              to="/branch/users"
+              className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+            >
+              <span className="nav-icon"><IconUserManagement /></span>
+              User Management
+            </NavLink>
+          )}
+
           {/* 3. COMPANY MANAGEMENT SECTION (Company Admin Only) */}
           {isCompanyAdmin && (
             <>
@@ -464,16 +474,20 @@ export default function Layout() {
             </>
           )}
 
-          {/* 4. ACCOUNT SECTION (All Authenticated Users) */}
-          <span className="nav-section-label" style={{ marginTop: '8px' }}>ACCOUNT</span>
+          {/* 4. ACCOUNT SECTION (Administrators with Security Management authority) */}
+          {(isCompanyAdmin || isBranchAdmin) && (
+            <>
+              <span className="nav-section-label" style={{ marginTop: '8px' }}>ACCOUNT</span>
 
-          <NavLink
-            to="/security"
-            className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
-          >
-            <span className="nav-icon"><IconPersonalSecurity /></span>
-            Personal Security & 2FA
-          </NavLink>
+              <NavLink
+                to="/security"
+                className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
+              >
+                <span className="nav-icon"><IconPersonalSecurity /></span>
+                Personal Security & 2FA
+              </NavLink>
+            </>
+          )}
         </nav>
 
         {/* Footer — tenant info */}

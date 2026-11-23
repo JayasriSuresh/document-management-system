@@ -4,6 +4,24 @@ import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import InvoiceA4PreviewCanvas from '../components/InvoiceA4PreviewCanvas';
 
+export const INVOICE_TYPES = [
+  'Tax Invoice',
+  'Invoice',
+  'Bill of Supply',
+  'Cash Memo',
+  'Retail Invoice',
+  'Export Invoice',
+  'Proforma Invoice',
+  'Credit Note',
+  'Debit Note',
+  'Receipt Voucher',
+  'Payment Voucher',
+  'Refund Voucher',
+  'Revised Invoice',
+  'Delivery Challan',
+  'Other',
+];
+
 const INDIAN_STATES = [
   { code: '01', name: 'Jammu and Kashmir' },
   { code: '02', name: 'Himachal Pradesh' },
@@ -88,6 +106,7 @@ export default function SalesInvoiceEditorPage() {
   const [sameAsBilling, setSameAsBilling] = useState(true);
   const [posStateCode, setPosStateCode] = useState('33');
   const [posStateName, setPosStateName] = useState('Tamil Nadu');
+  const [invoiceType, setInvoiceType] = useState('Tax Invoice');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('Net 30');
@@ -162,6 +181,7 @@ export default function SalesInvoiceEditorPage() {
             setPosStateCode(invData.place_of_supply_state_code || '33');
             setPosStateName(invData.place_of_supply_state_name || 'Tamil Nadu');
             if (invData.invoice_date) setInvoiceDate(invData.invoice_date);
+            if (invData.invoice_type) setInvoiceType(invData.invoice_type);
             if (invData.due_date) setDueDate(invData.due_date);
             if (invData.payment_terms) setPaymentTerms(invData.payment_terms);
             if (invData.terms_and_conditions) setTermsAndConditions(invData.terms_and_conditions);
@@ -448,6 +468,7 @@ export default function SalesInvoiceEditorPage() {
         place_of_supply: posStateCode,
         place_of_supply_state_code: posStateCode,
         place_of_supply_state_name: posStateName,
+        invoice_type: invoiceType || 'Tax Invoice',
         invoice_date: invoiceDate,
         due_date: dueDate || null,
         payment_terms: paymentTerms,
@@ -543,6 +564,7 @@ export default function SalesInvoiceEditorPage() {
         place_of_supply: posStateCode,
         place_of_supply_state_code: posStateCode,
         place_of_supply_state_name: posStateName,
+        invoice_type: invoiceType || 'Tax Invoice',
         invoice_date: invoiceDate,
         due_date: dueDate || null,
         payment_terms: paymentTerms,
@@ -856,7 +878,19 @@ export default function SalesInvoiceEditorPage() {
             <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
               2. Invoice Dates & Terms
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+              <div>
+                <label className="form-label" style={{ fontWeight: 600 }}>Invoice Type *</label>
+                <select
+                  className="form-control"
+                  value={invoiceType}
+                  onChange={(e) => setInvoiceType(e.target.value)}
+                >
+                  {INVOICE_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="form-label" style={{ fontWeight: 600 }}>Invoice Date *</label>
                 <input

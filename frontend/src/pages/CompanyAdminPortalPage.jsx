@@ -3244,13 +3244,15 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
                           >
                             Force Logout
                           </button>
-                          <button
-                            onClick={() => handleMfaResetRequest(u)}
-                            style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bae6fd', backgroundColor: '#f0f9ff', color: '#0369a1', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
-                            title="Reset User MFA"
-                          >
-                            Reset MFA
-                          </button>
+                          {u.role !== 'GLOBAL_ADMIN' && (
+                            <button
+                              onClick={() => handleMfaResetRequest(u)}
+                              style={{ padding: '5px 9px', borderRadius: '6px', border: '1px solid #bae6fd', backgroundColor: '#f0f9ff', color: '#0369a1', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                              title="Reset User MFA"
+                            >
+                              Reset MFA
+                            </button>
+                          )}
                           {u.status === 'active' ? (
                             <button
                               onClick={() => handleDeactivateUser(u)}
@@ -3911,6 +3913,20 @@ function CompanySecurityView({ showToast }) {
     }
   };
 
+  const handleToggleDelegation = async () => {
+    const nextVal = !policy?.allow_branch_mfa_control;
+    setUpdatingPolicy(true);
+    try {
+      const res = await api.updateCompanyMfaPolicy({ allow_branch_mfa_control: nextVal });
+      setPolicy(res);
+      showToast(`Branch MFA policy delegation ${nextVal ? 'ENABLED' : 'DISABLED'}.`);
+    } catch (err) {
+      showToast(err.message || 'Failed to update branch MFA delegation.', 'error');
+    } finally {
+      setUpdatingPolicy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '60px 0', textAlign: 'center', color: '#64748b' }}>
@@ -3967,6 +3983,39 @@ function CompanySecurityView({ showToast }) {
             }}
           >
             {updatingPolicy ? 'Updating...' : (policy?.mfa_required_for_all ? 'ENFORCED' : 'OPTIONAL')}
+          </button>
+        </div>
+      </div>
+
+      {/* Branch MFA Delegation Policy Card */}
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>
+              Branch MFA Policy Delegation
+            </h3>
+            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
+              Allow assigned Branch Administrators to mandate and configure MFA policies independently for their branches.
+            </p>
+          </div>
+
+          <button
+            onClick={handleToggleDelegation}
+            disabled={updatingPolicy}
+            style={{
+              padding: '9px 18px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: policy?.allow_branch_mfa_control ? '#2563eb' : '#cbd5e1',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: updatingPolicy ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'background 0.2s',
+            }}
+          >
+            {updatingPolicy ? 'Updating...' : (policy?.allow_branch_mfa_control ? 'DELEGATED' : 'DISABLED')}
           </button>
         </div>
       </div>

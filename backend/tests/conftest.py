@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.database import SessionLocal, Base, engine
-from app.models import Tenant, User, UserRole, Document, OcrStatus, UserMfa, MfaRecoveryCode, Company, PlatformSetting, MasterAdmin
+from app.models import Tenant, User, UserRole, Document, OcrStatus, UserMfa, MfaRecoveryCode, Company, PlatformSetting, MasterAdmin, Branch, AccountStatus, UserRoleAssignment
 from app.auth import get_password_hash, create_access_token
 
 
@@ -46,6 +46,51 @@ def reset_test_state(db):
         ])
     ).update({Document.deleted_at: None, Document.deleted_by: None}, synchronize_session=False)
 
+    # Ensure Hindu Priya exists in secondary branch for cross-branch RBAC isolation testing
+    hp = db.query(User).filter(User.email == "hindupriya@example.com").first()
+    sec_branch = db.query(Branch).filter(Branch.company_id == 40, Branch.id != 4932).first()
+    if not hp and sec_branch:
+        from app.auth import get_password_hash
+        hp = User(
+            company_id=40,
+            branch_id=sec_branch.id,
+            name="Hindu Priya",
+            email="hindupriya@example.com",
+            password_hash=get_password_hash("Pasword@123"),
+            role=UserRole.ADMIN,
+            status=AccountStatus.ACTIVE,
+        )
+        db.add(hp)
+        db.flush()
+        db.add(UserRoleAssignment(user_id=hp.id, role="ADMIN", scope_type="branch", scope_id=sec_branch.id))
+        db.flush()
+
+    # Re-create baseline documents if missing
+    baseline_docs = [
+        ("chennai_admin_doc.jpg", "samrethi@example.com"),
+        ("mysore_admin_doc.jpg", "hindupriya@example.com"),
+        ("sujipriya_recent.jpg", "sujipriya@example.com"),
+        ("boomika_recent.jpg", "boomika@example.com"),
+    ]
+    for fname, u_email in baseline_docs:
+        doc = db.query(Document).filter(Document.original_filename == fname).first()
+        if not doc:
+            user = db.query(User).filter(User.email == u_email).first()
+            if user:
+                doc = Document(
+                    company_id=user.company_id,
+                    branch_id=user.branch_id,
+                    uploaded_by=user.id,
+                    original_filename=fname,
+                    storage_key=f"seeded_{fname}",
+                    mime_type="image/jpeg",
+                    file_size=1024,
+                    ocr_status=OcrStatus.COMPLETED,
+                    ocr_text=f"Baseline sample text for {fname}",
+                    deleted_at=None,
+                )
+                db.add(doc)
+
     # Reset platform MFA policy so standard test logins don't block on MFA
     ps = db.query(PlatformSetting).filter(PlatformSetting.key == "mfa_policy").first()
     if ps:
@@ -66,7 +111,8 @@ def cleanup_test_seed_artifacts():
         Company, Branch, User, Document, Invoice, InvoiceItem, SupplierInvoiceCopy,
         CompanyOnboarding, UserRoleAssignment, UserSession, UserMfa, MfaRecoveryCode,
         Invitation, ProcessingJob, AIProcessingLog, AIUsageLedger, BranchAIConfig,
-        CompanyAISetting, CompanyAIConsent, DocumentExtraction, ExtractionEdit
+        CompanyAISetting, CompanyAIConsent, DocumentExtraction, ExtractionEdit,
+        GstRegistration, OutboundSalesInvoice, Customer
     )
     clean_db = SessionLocal()
     try:
@@ -86,7 +132,10 @@ def cleanup_test_seed_artifacts():
             subq_inv = clean_db.query(Invoice.id).filter(Invoice.company_id.in_(test_ids)).subquery()
             clean_db.query(SupplierInvoiceCopy).filter(SupplierInvoiceCopy.company_id.in_(test_ids)).delete(synchronize_session=False)
             clean_db.query(InvoiceItem).filter(InvoiceItem.invoice_id.in_(subq_inv)).delete(synchronize_session=False)
+            clean_db.query(OutboundSalesInvoice).filter(OutboundSalesInvoice.company_id.in_(test_ids)).delete(synchronize_session=False)
             clean_db.query(Invoice).filter(Invoice.company_id.in_(test_ids)).delete(synchronize_session=False)
+            clean_db.query(Customer).filter(Customer.company_id.in_(test_ids)).delete(synchronize_session=False)
+            clean_db.query(GstRegistration).filter(GstRegistration.company_id.in_(test_ids)).delete(synchronize_session=False)
 
             subq_docs = clean_db.query(Document.id).filter(Document.company_id.in_(test_ids)).subquery()
             subq_extractions = clean_db.query(DocumentExtraction.id).filter(DocumentExtraction.document_id.in_(subq_docs)).subquery()

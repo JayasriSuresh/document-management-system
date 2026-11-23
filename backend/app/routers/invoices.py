@@ -150,12 +150,13 @@ def list_invoices(
     search: str = Query(default="", description="Search in invoice number, seller, buyer, or filename"),
     kind: str = Query(default="all", description="Filter by kind: all, copy, generated"),
     status: str = Query(default="all", description="Filter by status: all, draft, pending_approval, approved, cancelled, available"),
+    invoice_type: str = Query(default="all", description="Filter by invoice type: all, Tax Invoice, Bill of Supply, etc."),
     db: Session = Depends(get_db),
     auth_context: AuthContext = Depends(require_permission(INVOICE_VIEW)),
 ):
     repo = InvoiceRepository(db, auth_context)
     repo.sync_stored_invoices()
-    invoices = repo.list_invoices(search=search, kind=kind, status=status)
+    invoices = repo.list_invoices(search=search, kind=kind, status=status, invoice_type=invoice_type)
 
     return [
         InvoiceOut(
@@ -188,6 +189,7 @@ def list_invoices(
             sgst_amount=str(inv.sgst_amount) if inv.sgst_amount is not None else None,
             igst_amount=str(inv.igst_amount) if inv.igst_amount is not None else None,
             round_off=str(inv.round_off) if inv.round_off is not None else None,
+            invoice_type=inv.invoice_type or "Tax Invoice",
         )
         for inv in invoices
     ]
@@ -245,6 +247,7 @@ def get_invoice(
         sgst_amount=str(inv.sgst_amount) if inv.sgst_amount is not None else None,
         igst_amount=str(inv.igst_amount) if inv.igst_amount is not None else None,
         round_off=str(inv.round_off) if inv.round_off is not None else None,
+        invoice_type=inv.invoice_type or "Tax Invoice",
     )
 
 

@@ -380,10 +380,18 @@ def test_upload_duplicate_detection_same_company(client, pipe_tenants):
     assert r1.status_code == 200
     doc1 = r1.json()
 
-    # 2. Second upload with same bytes in same company returns 409 Conflict
+    # 2. Second upload with same bytes in same company returns 409 Conflict with duplicate doc id header
     r2 = client.post("/api/documents", headers=headers, files={"file": ("duplicate.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")})
     assert r2.status_code == 409
     assert "duplicate" in r2.json()["detail"].lower()
+    assert r2.headers.get("X-Duplicate-Document-Id") == str(doc1["id"])
+
+    # 3. Third upload with allow_duplicate=true succeeds
+    r3 = client.post("/api/documents?allow_duplicate=true", headers=headers, files={"file": ("allowed_dup.jpg", io.BytesIO(jpeg_bytes), "image/jpeg")})
+    assert r3.status_code == 200
+    doc3 = r3.json()
+    assert doc3["id"] != doc1["id"]
+    assert doc3["sha256"] == doc1["sha256"]
 
 
 def test_upload_duplicate_cross_branch_same_company_anti_enumeration(client, pipe_tenants):

@@ -47,6 +47,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Security Secret Scanning
+        run: |
+          echo "Scanning codebase for unmasked API tokens, private keys, or passwords..."
+          python -c '
+          import re, sys
+          from pathlib import Path
+
+          PATTERN = re.compile(r"""(?:sk-[a-zA-Z0-9]{20,}|AIza[0-9A-Za-z-_]{35}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----)""")
+          violations = []
+          for p in Path("backend/app").rglob("*.py"):
+              content = p.read_text(encoding="utf-8")
+              for match in PATTERN.finditer(content):
+                  violations.append(f"{p}:{match.start()}: matches {match.group(0)[:8]}...")
+          if violations:
+              print("SECRET SCANNER FAILED: Found sensitive tokens:", violations)
+              sys.exit(1)
+          print("Secret scanning passed cleanly: No hardcoded secrets detected in backend/app.")
+          '
+
       - name: Run Alembic Migrations
         env:
           DATABASE_URL: postgresql://dms_user:dms_password@localhost:5433/dms_db
@@ -54,7 +73,7 @@ jobs:
           cd backend
           alembic upgrade head
 
-      - name: Run Pytest with Coverage
+      - name: Run Pytest Suite with Coverage (Baseline + Module 16 Suites)
         env:
           DATABASE_URL: postgresql://dms_user:dms_password@localhost:5433/dms_db
           APP_ENV: test

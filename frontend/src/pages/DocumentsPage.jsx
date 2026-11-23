@@ -142,6 +142,24 @@ const IconRestore = () => (
   </svg>
 );
 
+export const INVOICE_TYPES = [
+  'Tax Invoice',
+  'Invoice',
+  'Bill of Supply',
+  'Cash Memo',
+  'Retail Invoice',
+  'Export Invoice',
+  'Proforma Invoice',
+  'Credit Note',
+  'Debit Note',
+  'Receipt Voucher',
+  'Payment Voucher',
+  'Refund Voucher',
+  'Revised Invoice',
+  'Delivery Challan',
+  'Other',
+];
+
 const EMPTY_FILTERS = {
   dateFrom: '',
   dateTo: '',
@@ -151,6 +169,7 @@ const EMPTY_FILTERS = {
   amountMin: '',
   amountMax: '',
   documentType: '',
+  invoiceType: '',
   branchId: '',
   status: '',
 };
@@ -224,6 +243,7 @@ export default function DocumentsPage() {
         amountMin: activeFilters.amountMin || undefined,
         amountMax: activeFilters.amountMax || undefined,
         documentType: activeFilters.documentType || undefined,
+        invoiceType: activeFilters.invoiceType || undefined,
         includeDeleted: viewTab === 'trash',
         paginate: true,
       });
@@ -619,17 +639,34 @@ export default function DocumentsPage() {
               />
             </div>
 
-            {/* Document Type */}
+            {/* Invoice Type */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
-                Document Type
+                Invoice Type
+              </label>
+              <select
+                value={filters.invoiceType}
+                onChange={e => setFilters({ ...filters, invoiceType: e.target.value })}
+                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+              >
+                <option value="">All Invoice Types</option>
+                {INVOICE_TYPES.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Document / File Format */}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+                File Format
               </label>
               <select
                 value={filters.documentType}
                 onChange={e => setFilters({ ...filters, documentType: e.target.value })}
                 style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
               >
-                <option value="">All Types</option>
+                <option value="">All Formats</option>
                 <option value="pdf">PDF Documents</option>
                 <option value="image">Image Files</option>
               </select>
@@ -720,9 +757,15 @@ export default function DocumentsPage() {
               <button type="button" onClick={() => handleRemoveSingleFilter('dateTo')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold' }}>×</button>
             </span>
           )}
+          {activeFilters.invoiceType && (
+            <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+              Invoice Type: {activeFilters.invoiceType}
+              <button type="button" onClick={() => handleRemoveSingleFilter('invoiceType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b91c1c', fontWeight: 'bold' }}>×</button>
+            </span>
+          )}
           {activeFilters.documentType && (
             <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
-              Type: {activeFilters.documentType.toUpperCase()}
+              Format: {activeFilters.documentType.toUpperCase()}
               <button type="button" onClick={() => handleRemoveSingleFilter('documentType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold' }}>×</button>
             </span>
           )}
@@ -860,6 +903,21 @@ export default function DocumentsPage() {
 
                         {/* Extracted metadata badges */}
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
+                          {doc.invoice_type && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                backgroundColor: '#fef2f2',
+                                color: '#b91c1c',
+                                border: '1px solid #fecaca',
+                              }}
+                            >
+                              {doc.invoice_type}
+                            </span>
+                          )}
                           {doc.invoice_number && (
                             <span
                               style={{

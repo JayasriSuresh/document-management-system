@@ -45,6 +45,12 @@ USER_INVITE = "user.invite"
 USER_ASSIGN_ROLE = "user.assign_role"
 USER_DEACTIVATE = "user.deactivate"
 
+USER_VIEW_BRANCH = "user.view_branch"
+USER_INVITE_BRANCH = "user.invite_branch"
+USER_UPDATE_BRANCH = "user.update_branch"
+USER_DEACTIVATE_BRANCH = "user.deactivate_branch"
+USER_ACTIVATE_BRANCH = "user.activate_branch"
+
 BRANCH_VIEW = "branch.view"
 BRANCH_CREATE = "branch.create"
 BRANCH_EDIT = "branch.edit"
@@ -60,6 +66,7 @@ AUDIT_VIEW_PLATFORM = "audit.view_platform"
 # ── Multi-Factor Authentication Permissions (Module 6) ───────────────────────
 MFA_MANAGE_COMPANY = "mfa.manage_company"
 MFA_MANAGE_PLATFORM = "mfa.manage_platform"
+MFA_MANAGE_BRANCH = "mfa.manage_branch"
 
 # ── Platform Master Admin Permissions ─────────────────────────────────────────
 PLATFORM_MANAGE = "platform.manage"
@@ -112,6 +119,11 @@ ALL_PERMISSIONS: FrozenSet[str] = frozenset({
     USER_INVITE,
     USER_ASSIGN_ROLE,
     USER_DEACTIVATE,
+    USER_VIEW_BRANCH,
+    USER_INVITE_BRANCH,
+    USER_UPDATE_BRANCH,
+    USER_DEACTIVATE_BRANCH,
+    USER_ACTIVATE_BRANCH,
     BRANCH_VIEW,
     BRANCH_CREATE,
     BRANCH_EDIT,
@@ -122,6 +134,7 @@ ALL_PERMISSIONS: FrozenSet[str] = frozenset({
     AUDIT_VIEW_PLATFORM,
     MFA_MANAGE_COMPANY,
     MFA_MANAGE_PLATFORM,
+    MFA_MANAGE_BRANCH,
     PLATFORM_MANAGE,
     AI_SETTINGS_VIEW,
     AI_SETTINGS_MANAGE,

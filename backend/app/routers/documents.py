@@ -393,6 +393,8 @@ async def _process_single_upload(
     background_tasks: BackgroundTasks,
     raise_on_error: bool = False,
     document_type: Optional[str] = "gst_invoice",
+    allow_duplicate: bool = False,
+    invoice_type: Optional[str] = "Tax Invoice",
 ):
     """
     Internal helper to validate, store, and enqueue an individual file upload.
@@ -409,7 +411,7 @@ async def _process_single_upload(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=validation.error_message or "Invalid file format.",
             )
-        return None, validation.error_code, validation.error_message
+        return None, validation.error_code, validation.error_message, None
 
     # 2. Duplicate Detection
     dup = (
@@ -421,10 +423,17 @@ async def _process_single_upload(
         )
         .first()
     )
+    is_duplicate_override = False
     if dup:
         # Anti-enumeration check
-        is_accessible = (
+        has_company_scope = (
             auth_context.is_global_admin or
+            "document.view_company" in auth_context.permissions or
+            "document:view_company" in auth_context.permissions
+        )
+        is_accessible = (
+            has_company_scope or
+            dup.branch_id == auth_context.branch_id or
             dup.branch_id in auth_context.assigned_branch_ids
         )
         if is_accessible:
@@ -432,12 +441,19 @@ async def _process_single_upload(
         else:
             dup_msg = "Duplicate document: an exact identical file already exists within your company."
 
-        if raise_on_error:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=dup_msg,
-            )
-        return None, "DUPLICATE_DOCUMENT", dup_msg
+        if not allow_duplicate:
+            response_headers = {}
+            if is_accessible:
+                response_headers["X-Duplicate-Document-Id"] = str(dup.id)
+            if raise_on_error:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=dup_msg,
+                    headers=response_headers if response_headers else None,
+                )
+            return None, "DUPLICATE_DOCUMENT", dup_msg, (dup.id if is_accessible else None)
+        else:
+            is_duplicate_override = True
 
     # 3. Company Storage Quota check with row-level lock
     company = db.query(Company).filter(Company.id == auth_context.company_id).with_for_update().first()
@@ -459,7 +475,7 @@ async def _process_single_upload(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                     detail=quota_msg,
                 )
-            return None, "STORAGE_QUOTA_EXCEEDED", quota_msg
+            return None, "STORAGE_QUOTA_EXCEEDED", quota_msg, None
 
     # 4. Storage Adapter write
     storage = get_storage_adapter()
@@ -481,6 +497,7 @@ async def _process_single_upload(
         sha256=validation.sha256,
         page_count=validation.page_count,
         error_code=None,
+        invoice_type=invoice_type or "Tax Invoice",
         commit=False,
     )
 
@@ -507,6 +524,17 @@ async def _process_single_upload(
     )
 
     # 7. Audit log
+    audit_metadata = {
+        "filename": doc.original_filename,
+        "file_size": doc.file_size,
+        "mime_type": doc.mime_type,
+        "sha256": doc.sha256,
+        "job_id": job.id,
+    }
+    if is_duplicate_override and dup:
+        audit_metadata["is_duplicate_override"] = True
+        audit_metadata["original_duplicate_id"] = dup.id
+
     audit.record_event(
         db=db,
         action=AUDIT_DOCUMENT_UPLOAD,
@@ -514,13 +542,7 @@ async def _process_single_upload(
         auth_context=auth_context,
         object_type=ObjectType.DOCUMENT,
         object_id=doc.id,
-        metadata={
-            "filename": doc.original_filename,
-            "file_size": doc.file_size,
-            "mime_type": doc.mime_type,
-            "sha256": doc.sha256,
-            "job_id": job.id,
-        },
+        metadata=audit_metadata,
     )
 
     db.commit()
@@ -529,7 +551,7 @@ async def _process_single_upload(
 
     # Trigger background worker execution
     background_tasks.add_task(run_worker_job, job.id)
-    return doc, None, None
+    return doc, None, None, None
 
 
 @router.post("", response_model=Union[DocumentOut, BatchUploadResponse])
@@ -540,9 +562,12 @@ async def upload_document(
     file: Optional[UploadFile] = File(None),
     files: Optional[List[UploadFile]] = File(None),
     document_type: Optional[str] = Form("gst_invoice"),
+    invoice_type: Optional[str] = Form("Tax Invoice"),
+    allow_duplicate: bool = Query(False),
     db: Session = Depends(get_db),
     auth_context: AuthContext = Depends(require_permission(DOCUMENT_UPLOAD)),
 ):
+    allow_dup = allow_duplicate or (request.query_params.get("allow_duplicate", "").lower() in ("true", "1"))
     upload_list = []
     if files:
         upload_list.extend(files)
@@ -554,7 +579,7 @@ async def upload_document(
 
     # Single-file upload mode (preserves 100% backward compatibility for single-file tests & clients)
     if len(upload_list) == 1 and file is not None and not files:
-        doc, err_code, err_msg = await _process_single_upload(
+        doc, err_code, err_msg, dup_doc_id = await _process_single_upload(
             file=upload_list[0],
             db=db,
             auth_context=auth_context,
@@ -562,6 +587,8 @@ async def upload_document(
             background_tasks=background_tasks,
             raise_on_error=True,
             document_type=document_type,
+            allow_duplicate=allow_dup,
+            invoice_type=invoice_type,
         )
         return _doc_to_out(doc, auth_context.user_name)
 
@@ -577,7 +604,7 @@ async def upload_document(
     failed_count = 0
 
     for f in upload_list:
-        doc, err_code, err_msg = await _process_single_upload(
+        doc, err_code, err_msg, dup_doc_id = await _process_single_upload(
             file=f,
             db=db,
             auth_context=auth_context,
@@ -585,6 +612,8 @@ async def upload_document(
             background_tasks=background_tasks,
             raise_on_error=False,
             document_type=document_type,
+            allow_duplicate=allow_dup,
+            invoice_type=invoice_type,
         )
         if doc:
             successful_count += 1
@@ -600,6 +629,7 @@ async def upload_document(
                 status="error",
                 error_code=err_code,
                 error=err_msg,
+                duplicate_document_id=dup_doc_id,
             ))
 
     return BatchUploadResponse(
@@ -616,6 +646,8 @@ async def upload_documents_batch(
     request: Request,
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
+    invoice_type: Optional[str] = Form("Tax Invoice"),
+    allow_duplicate: bool = Query(False),
     db: Session = Depends(get_db),
     auth_context: AuthContext = Depends(require_permission(DOCUMENT_UPLOAD)),
 ):
@@ -626,18 +658,21 @@ async def upload_documents_batch(
             detail=f"Batch size exceeds maximum limit of {settings.MAX_BATCH_FILES} files per request.",
         )
 
+    allow_dup = allow_duplicate or (request.query_params.get("allow_duplicate", "").lower() in ("true", "1"))
     results: List[FileUploadResultItem] = []
     successful_count = 0
     failed_count = 0
 
     for f in files:
-        doc, err_code, err_msg = await _process_single_upload(
+        doc, err_code, err_msg, dup_doc_id = await _process_single_upload(
             file=f,
             db=db,
             auth_context=auth_context,
             request=request,
             background_tasks=background_tasks,
             raise_on_error=False,
+            allow_duplicate=allow_dup,
+            invoice_type=invoice_type,
         )
         if doc:
             successful_count += 1
@@ -653,6 +688,7 @@ async def upload_documents_batch(
                 status="error",
                 error_code=err_code,
                 error=err_msg,
+                duplicate_document_id=dup_doc_id,
             ))
 
     return BatchUploadResponse(
@@ -678,6 +714,7 @@ def search_documents(
     branch_id: Optional[int] = Query(default=None, description="Filter by branch ID"),
     status: Optional[str] = Query(default=None, description="Filter by document OCR status"),
     document_type: Optional[str] = Query(default=None, description="Filter by document or MIME type"),
+    invoice_type: Optional[str] = Query(default=None, description="Filter by invoice type"),
     include_deleted: bool = Query(default=False, description="Include soft-deleted documents"),
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=20, ge=1, le=100, description="Page size"),
@@ -702,6 +739,7 @@ def search_documents(
         branch_id=branch_id,
         status=status,
         document_type=document_type,
+        invoice_type=invoice_type,
         include_deleted=include_deleted,
         page=page,
         page_size=page_size,
@@ -725,6 +763,7 @@ def list_documents(
     amount_min: Optional[str] = Query(default=None, description="Minimum invoice amount"),
     amount_max: Optional[str] = Query(default=None, description="Maximum invoice amount"),
     document_type: Optional[str] = Query(default=None, description="Filter by document type or MIME"),
+    invoice_type: Optional[str] = Query(default=None, description="Filter by invoice type"),
     include_deleted: bool = Query(default=False, description="Include soft-deleted documents"),
     paginate: bool = Query(default=False, description="Force paginated response envelope"),
     db: Session = Depends(get_db),
@@ -740,7 +779,8 @@ def list_documents(
         (gstin and gstin.strip()) or
         (amount_min and amount_min.strip()) or
         (amount_max and amount_max.strip()) or
-        (document_type and document_type.strip())
+        (document_type and document_type.strip()) or
+        (invoice_type and invoice_type.strip() and invoice_type.strip().lower() != "all")
     )
 
     if has_search:
@@ -757,6 +797,7 @@ def list_documents(
             branch_id=branch_id,
             status=status,
             document_type=document_type,
+            invoice_type=invoice_type,
             include_deleted=include_deleted,
             page=curr_page,
             page_size=page_size,
@@ -795,6 +836,7 @@ def list_documents(
                 thumbnail_url=item.get("thumbnail_url"),
                 file_url=item.get("file_url"),
                 tenant_id=item["branch_id"],
+                invoice_type=item.get("invoice_type") or "Tax Invoice",
             )
             for item in res["items"]
         ]
@@ -818,6 +860,7 @@ def list_documents(
         branch_id=branch_id,
         date_from=date_from,
         date_to=date_to,
+        invoice_type=invoice_type,
         include_deleted=include_deleted,
     )
 
@@ -859,6 +902,7 @@ def list_documents(
             thumbnail_url=f"/api/documents/{doc.id}/thumbnail",
             file_url=f"/api/documents/{doc.id}/file",
             tenant_id=doc.branch_id,
+            invoice_type=getattr(doc, "invoice_type", "Tax Invoice") or "Tax Invoice",
         )
         for doc in items
     ]
@@ -1459,4 +1503,5 @@ def _doc_to_out(doc: Document, uploader_name: str) -> DocumentOut:
         restored_at=doc.restored_at,
         restored_by=doc.restored_by,
         tenant_id=doc.branch_id,
+        invoice_type=getattr(doc, "invoice_type", "Tax Invoice") or "Tax Invoice",
     )

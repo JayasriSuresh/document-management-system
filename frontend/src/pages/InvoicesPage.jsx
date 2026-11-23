@@ -27,6 +27,24 @@ function formatDate(isoStr) {
   }
 }
 
+export const INVOICE_TYPES = [
+  'Tax Invoice',
+  'Invoice',
+  'Bill of Supply',
+  'Cash Memo',
+  'Retail Invoice',
+  'Export Invoice',
+  'Proforma Invoice',
+  'Credit Note',
+  'Debit Note',
+  'Receipt Voucher',
+  'Payment Voucher',
+  'Refund Voucher',
+  'Revised Invoice',
+  'Delivery Challan',
+  'Other',
+];
+
 export default function InvoicesPage() {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
@@ -34,6 +52,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'copy' | 'generated'
   const [statusFilter, setStatusFilter] = useState('all');
+  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [inputVal, setInputVal] = useState('');
   const [loading, setLoading] = useState(true);
@@ -56,6 +75,7 @@ export default function InvoicesPage() {
         search: search || undefined,
         kind: activeTab === 'all' ? undefined : activeTab,
         status: statusFilter === 'all' ? undefined : statusFilter,
+        invoice_type: invoiceTypeFilter === 'all' ? undefined : invoiceTypeFilter,
       };
       const data = await api.listInvoices(params);
       setInvoices(data || []);
@@ -64,7 +84,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, activeTab, statusFilter]);
+  }, [search, activeTab, statusFilter, invoiceTypeFilter]);
 
   useEffect(() => {
     fetchInvoices();
@@ -267,22 +287,41 @@ export default function InvoicesPage() {
           </button>
         </div>
 
-        {/* Status Dropdown Filter */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Status:</label>
-          <select
-            className="form-control"
-            style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">All Statuses</option>
-            <option value="available">Available</option>
-            <option value="draft">Draft</option>
-            <option value="pending_approval">Pending Approval</option>
-            <option value="approved">Approved</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+        {/* Filter Controls: Status and Invoice Type */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Status Dropdown Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Status:</label>
+            <select
+              className="form-control"
+              style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">All Statuses</option>
+              <option value="available">Available</option>
+              <option value="draft">Draft</option>
+              <option value="pending_approval">Pending Approval</option>
+              <option value="approved">Approved</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          {/* Invoice Type Dropdown Filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Invoice Type:</label>
+            <select
+              className="form-control"
+              style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
+              value={invoiceTypeFilter}
+              onChange={(e) => setInvoiceTypeFilter(e.target.value)}
+            >
+              <option value="all">All Types</option>
+              {INVOICE_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -385,58 +424,52 @@ export default function InvoicesPage() {
                     <tr key={`${inv.kind}-${inv.id}`}>
                       {/* Type Badge */}
                       <td>
-                        {isCopy ? (
-                          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.2rem' }}>
-                            <span
-                              style={{
-                                fontSize: '0.72rem',
-                                fontWeight: 700,
-                                background: '#e0f2fe',
-                                color: '#0369a1',
-                                border: '1px solid #bae6fd',
-                                padding: '0.15rem 0.45rem',
-                                borderRadius: 'var(--radius-sm)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.04em',
-                                display: 'inline-block',
-                              }}
-                            >
-                              Standardised Copy {inv.copy_version ? `v${inv.copy_version}` : 'v1'}
-                            </span>
-                            {inv.is_stale && (
-                              <span
-                                style={{
-                                  fontSize: '0.68rem',
-                                  fontWeight: 600,
-                                  background: '#fffbeb',
-                                  color: '#b45309',
-                                  border: '1px solid #fde68a',
-                                  padding: '0.1rem 0.35rem',
-                                  borderRadius: 'var(--radius-sm)',
-                                }}
-                              >
-                                ⚠️ Stale
-                              </span>
-                            )}
-                          </div>
-                        ) : (
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <span
                             style={{
                               fontSize: '0.72rem',
                               fontWeight: 700,
-                              background: '#ecfdf5',
-                              color: '#047857',
-                              border: '1px solid #a7f3d0',
+                              background: '#fef2f2',
+                              color: '#b91c1c',
+                              border: '1px solid #fecaca',
                               padding: '0.15rem 0.45rem',
                               borderRadius: 'var(--radius-sm)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em',
+                              letterSpacing: '0.02em',
                               display: 'inline-block',
                             }}
                           >
-                            Sales Invoice
+                            {inv.invoice_type || 'Tax Invoice'}
                           </span>
-                        )}
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 600,
+                              color: isCopy ? '#0369a1' : '#047857',
+                              background: isCopy ? '#e0f2fe' : '#ecfdf5',
+                              padding: '0.08rem 0.35rem',
+                              borderRadius: 'var(--radius-sm)',
+                              display: 'inline-block',
+                              width: 'fit-content',
+                            }}
+                          >
+                            {isCopy ? (inv.copy_version ? `Copy v${inv.copy_version}` : 'Standardised Copy') : 'Sales Invoice'}
+                          </span>
+                          {inv.is_stale && (
+                            <span
+                              style={{
+                                fontSize: '0.65rem',
+                                fontWeight: 600,
+                                background: '#fffbeb',
+                                color: '#b45309',
+                                border: '1px solid #fde68a',
+                                padding: '0.08rem 0.35rem',
+                                borderRadius: 'var(--radius-sm)',
+                              }}
+                            >
+                              ⚠️ Stale
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Invoice Number */}

@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PlatformProtectedRoute from './components/PlatformProtectedRoute';
 import CompanyProtectedRoute from './components/CompanyProtectedRoute';
+import BranchProtectedRoute from './components/BranchProtectedRoute';
 import RoleBasedIndexRedirect from './components/RoleBasedIndexRedirect';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
@@ -22,6 +23,7 @@ import CompanyOnboardingPage from './pages/CompanyOnboardingPage';
 import CompanyAdminPortalPage from './pages/CompanyAdminPortalPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import SecuritySettingsPage from './pages/SecuritySettingsPage';
+import BranchUserManagementPage from './pages/BranchUserManagementPage';
 
 export default function App() {
   return (
@@ -88,6 +90,14 @@ export default function App() {
             <Route path="documents/:id/review" element={<DocumentReviewPage />} />
             <Route path="audit" element={<AuditLogsPage />} />
             <Route path="security" element={<SecuritySettingsPage />} />
+            <Route
+              path="branch/users"
+              element={
+                <BranchProtectedRoute>
+                  <BranchUserManagementPage />
+                </BranchProtectedRoute>
+              }
+            />
 
             {/* Company Management Section (Strictly Company Admin Only) */}
             <Route

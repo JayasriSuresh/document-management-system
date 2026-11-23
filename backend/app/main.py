@@ -39,6 +39,7 @@ from app.routers import (
     customers,
     sales_invoices,
     dashboard,
+    branch_users,
 )
 from app.routers.ai import platform_ai_router, company_ai_router, branch_ai_router
 
@@ -157,12 +158,27 @@ app.include_router(gst_registrations.router)
 app.include_router(customers.router)
 app.include_router(sales_invoices.router)
 app.include_router(dashboard.router)
+app.include_router(branch_users.router)
 
 
 # ── Health check ───────────────────────────────────────────────────────────
 @app.get("/health", tags=["ops"])
 def health():
     return {"status": "ok", "env": settings.APP_ENV}
+
+
+# ── Operational Metrics & Telemetry ────────────────────────────────────────
+@app.get("/metrics", tags=["ops"])
+def prometheus_metrics():
+    from fastapi.responses import PlainTextResponse
+    from app.services.metrics_service import metrics_service
+    return PlainTextResponse(metrics_service.to_prometheus(), media_type="text/plain; version=0.0.4; charset=utf-8")
+
+
+@app.get("/api/metrics", tags=["ops"])
+def json_metrics():
+    from app.services.metrics_service import metrics_service
+    return metrics_service.get_summary()
 
 
 # ── React frontend static files (must come LAST — after all API routes) ───

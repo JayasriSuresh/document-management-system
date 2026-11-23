@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, decode_token, verify_password
 from app.auth.dependencies import require_permission
-from app.auth.permissions import MFA_MANAGE_COMPANY, MFA_MANAGE_PLATFORM
+from app.auth.permissions import MFA_MANAGE_COMPANY, MFA_MANAGE_PLATFORM, MFA_MANAGE_BRANCH
 from app.auth.role_permissions import ROLE_GLOBAL_ADMIN
 from app.config import settings
 from app.context import (
@@ -29,19 +29,26 @@ from app.context import (
     MasterAdminContext,
     _build_auth_context,
     _build_master_admin_context,
+    get_auth_context,
     require_company,
     require_platform,
+    resolve_user_permissions_and_assignments,
 )
 from app.database import get_db
 from app.models import (
     AccountStatus,
+    Branch,
     Company,
     CompanyStatus,
     MasterAdmin,
     User,
     UserRole,
+    UserRoleAssignment,
 )
 from app.schemas import (
+    AdminMfaResetRequest,
+    BranchMfaPolicyRequest,
+    BranchMfaPolicyResponse,
     CompanyMfaPolicyRequest,
     CompanyMfaPolicyResponse,
     GenericMessageResponse,
@@ -191,6 +198,21 @@ def _resolve_caller_identity(
         }
 
 
+def _resolve_user_effective_roles(user: User, db: Session) -> set[str]:
+    from app.models import UserRoleAssignment
+    roles = set()
+    if user.role:
+        roles.add(user.role.value if hasattr(user.role, "value") else str(user.role))
+    db_assignments = (
+        db.query(UserRoleAssignment.role)
+        .filter(UserRoleAssignment.user_id == user.id)
+        .all()
+    )
+    for (r,) in db_assignments:
+        roles.add(r)
+    return roles
+
+
 # ── 1. ENROLLMENT ────────────────────────────────────────────────────────────
 
 @router.post("/api/auth/mfa/enroll/start", response_model=MfaEnrollStartResponse)
@@ -208,6 +230,17 @@ def enroll_start(
     ident = _resolve_caller_identity(request, db, authorization, allow_enrollment_token=True)
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "")
+
+    # If calling with a full session token (not an enrollment_token), check if voluntary self-enrollment is permitted
+    if not ident.get("is_enrollment_token") and ident["identity_type"] == "user":
+        target_u = ident["user"]
+        target_roles = _resolve_user_effective_roles(target_u, db)
+        # Voluntary opt-in is reserved for administrators (GLOBAL_ADMIN, ADMIN); Staff and Uploader cannot voluntarily enroll when optional
+        if "GLOBAL_ADMIN" not in target_roles and "ADMIN" not in target_roles and not MfaService.is_mfa_mandatory_for_user(db, target_u):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Individual self-enrollment is disabled for your role. Contact your administrator.",
+            )
 
     result = MfaService.start_enrollment(
         db=db,
@@ -898,10 +931,21 @@ def disable_mfa(
     """
     Disable MFA. Requires password and TOTP code.
     Blocked if MFA is mandated by company or platform policy.
+    Restricted to administrators; Staff and Uploaders cannot self-disable.
     """
     ident = _resolve_caller_identity(request, db, authorization, allow_enrollment_token=False)
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "")
+
+    # Staff and Uploader accounts cannot disable MFA
+    if ident["identity_type"] == "user":
+        target_u = ident["user"]
+        target_roles = _resolve_user_effective_roles(target_u, db)
+        if "GLOBAL_ADMIN" not in target_roles and "ADMIN" not in target_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to disable MFA. Contact your administrator.",
+            )
 
     # Verify password
     pwd_hash = ident["admin"].password_hash if ident["identity_type"] == "master_admin" else ident["user"].password_hash
@@ -954,10 +998,21 @@ def regenerate_recovery(
     """
     Regenerates recovery codes. Requires active MFA.
     Validates password or TOTP code.
+    Restricted to administrators (Master Admin, Company Admin, Branch Admin).
     """
     ident = _resolve_caller_identity(request, db, authorization, allow_enrollment_token=False)
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "")
+
+    # Non-administrative users (Staff, Uploader) cannot regenerate recovery codes
+    if ident["identity_type"] == "user":
+        target_u = ident["user"]
+        target_roles = _resolve_user_effective_roles(target_u, db)
+        if "GLOBAL_ADMIN" not in target_roles and "ADMIN" not in target_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Recovery-code regeneration is restricted to administrators. Contact your administrator.",
+            )
 
     if payload.code:
         success, err = MfaService.verify_totp_code(db, ident["identity_type"], ident["identity_id"], payload.code)
@@ -1000,7 +1055,7 @@ def regenerate_recovery(
     )
 
 
-# ── 4. COMPANY & PLATFORM MFA POLICIES ───────────────────────────────────────
+# ── 4. COMPANY, BRANCH & PLATFORM MFA POLICIES ────────────────────────────────
 
 @router.get(
     "/api/company/security/mfa-policy",
@@ -1011,13 +1066,14 @@ def get_company_mfa_policy(
     auth_ctx: AuthContext = Depends(require_company),
     db: Session = Depends(get_db),
 ):
-    """Fetch company MFA policy (Company Admin only)."""
+    """Fetch company MFA policy and delegation settings (Company Admin only)."""
     company = db.query(Company).filter_by(id=auth_ctx.company_id).first()
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
     return CompanyMfaPolicyResponse(
         company_id=company.id,
         mfa_required_for_all=bool(company.mfa_required_for_all),
+        allow_branch_mfa_control=bool(getattr(company, "allow_branch_mfa_control", False)),
     )
 
 
@@ -1032,7 +1088,7 @@ def update_company_mfa_policy(
     auth_ctx: AuthContext = Depends(require_company),
     db: Session = Depends(get_db),
 ):
-    """Update company MFA policy (Company Admin only)."""
+    """Update company MFA policy and branch delegation (Company Admin only)."""
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "")
 
@@ -1040,8 +1096,25 @@ def update_company_mfa_policy(
     if not company:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
 
-    company.mfa_required_for_all = payload.mfa_required_for_all
+    platform_policy = MfaService.get_platform_mfa_policy(db)
+    # Anti-downgrade check against platform enforce_all
+    if platform_policy.get("enforce_all") and payload.mfa_required_for_all is False:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="MFA is enforced platform-wide by Master Administration and cannot be relaxed.",
+        )
+
+    prev_mfa_required = bool(company.mfa_required_for_all)
+    if payload.mfa_required_for_all is not None:
+        company.mfa_required_for_all = payload.mfa_required_for_all
+    if payload.allow_branch_mfa_control is not None:
+        company.allow_branch_mfa_control = payload.allow_branch_mfa_control
     company.updated_at = datetime.utcnow()
+
+    # If transitioned from optional to mandatory, invalidate active sessions across all company users
+    if not prev_mfa_required and company.mfa_required_for_all:
+        affected_user_ids = [row[0] for row in db.query(User.id).filter(User.company_id == company.id).all()]
+        MfaService.invalidate_sessions_for_users(db, affected_user_ids, reason="company_mfa_policy_mandated")
 
     audit.record(
         db=db,
@@ -1054,13 +1127,157 @@ def update_company_mfa_policy(
         object_id=str(company.id),
         ip=client_ip,
         user_agent=user_agent,
-        metadata={"mfa_required_for_all": company.mfa_required_for_all},
+        metadata={
+            "mfa_required_for_all": company.mfa_required_for_all,
+            "allow_branch_mfa_control": getattr(company, "allow_branch_mfa_control", False),
+        },
     )
     db.commit()
 
     return CompanyMfaPolicyResponse(
         company_id=company.id,
         mfa_required_for_all=company.mfa_required_for_all,
+        allow_branch_mfa_control=bool(getattr(company, "allow_branch_mfa_control", False)),
+    )
+
+
+# ── BRANCH MFA POLICY ENDPOINTS ──────────────────────────────────────────────
+
+@router.get(
+    "/api/branch/{branch_id}/security/mfa-policy",
+    response_model=BranchMfaPolicyResponse,
+    dependencies=[Depends(require_permission(MFA_MANAGE_BRANCH))],
+)
+def get_branch_mfa_policy(
+    branch_id: int,
+    auth_ctx: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+):
+    """Fetch branch MFA policy and effective lock state."""
+    branch = db.query(Branch).filter_by(id=branch_id, company_id=auth_ctx.company_id).first()
+    if not branch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found.")
+
+    if not auth_ctx.is_global_admin and branch.id not in auth_ctx.assigned_branch_ids:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: Branch outside assigned scope.")
+
+    platform_policy = MfaService.get_platform_mfa_policy(db)
+    company = db.query(Company).filter_by(id=auth_ctx.company_id).first()
+
+    is_locked = False
+    lock_reason = None
+    if platform_policy.get("enforce_all"):
+        is_locked = True
+        lock_reason = "Platform policy mandates MFA for all users."
+    elif company and company.mfa_required_for_all:
+        is_locked = True
+        lock_reason = "Company policy mandates MFA for all users."
+
+    effective_mfa = is_locked or bool(getattr(branch, "mfa_required_for_all", False))
+
+    return BranchMfaPolicyResponse(
+        branch_id=branch.id,
+        company_id=branch.company_id,
+        mfa_required_for_all=bool(getattr(branch, "mfa_required_for_all", False)),
+        effective_mfa_required=effective_mfa,
+        is_locked_by_higher_policy=is_locked,
+        lock_reason=lock_reason,
+    )
+
+
+@router.post(
+    "/api/branch/{branch_id}/security/mfa-policy",
+    response_model=BranchMfaPolicyResponse,
+    dependencies=[Depends(require_permission(MFA_MANAGE_BRANCH))],
+)
+def update_branch_mfa_policy(
+    branch_id: int,
+    payload: BranchMfaPolicyRequest,
+    request: Request,
+    auth_ctx: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+):
+    """Update branch-specific MFA policy (Delegated Branch Admin or Company Admin)."""
+    branch = db.query(Branch).filter_by(id=branch_id, company_id=auth_ctx.company_id).first()
+    if not branch:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Branch not found.")
+
+    if not auth_ctx.is_global_admin and branch.id not in auth_ctx.assigned_branch_ids:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: Branch outside assigned scope.")
+
+    platform_policy = MfaService.get_platform_mfa_policy(db)
+    company = db.query(Company).filter_by(id=auth_ctx.company_id).first()
+
+    # Anti-downgrade 1: Platform enforce_all
+    if platform_policy.get("enforce_all") and payload.mfa_required_for_all is False:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="MFA is enforced platform-wide by Master Administration and cannot be modified at the branch level.",
+        )
+
+    # Anti-downgrade 2: Company mfa_required_for_all
+    if company and company.mfa_required_for_all and payload.mfa_required_for_all is False:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="MFA is mandated company-wide by your Company Administrator and cannot be weakened for this branch.",
+        )
+
+    # Delegation check: if caller is not GLOBAL_ADMIN, company must have allow_branch_mfa_control enabled
+    if not auth_ctx.is_global_admin and not getattr(company, "allow_branch_mfa_control", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Branch-level MFA policy management has not been delegated by your Company Administrator.",
+        )
+
+    prev_mfa_required = bool(getattr(branch, "mfa_required_for_all", False))
+    branch.mfa_required_for_all = payload.mfa_required_for_all
+    branch.updated_at = datetime.utcnow()
+
+    # Invalidate sessions for affected branch users if transitioned to mandatory
+    if not prev_mfa_required and branch.mfa_required_for_all:
+        from sqlalchemy import or_, and_
+        branch_user_ids = [
+            row[0] for row in db.query(User.id)
+            .outerjoin(UserRoleAssignment, UserRoleAssignment.user_id == User.id)
+            .filter(
+                User.company_id == auth_ctx.company_id,
+                or_(
+                    User.branch_id == branch.id,
+                    and_(UserRoleAssignment.scope_type == "branch", UserRoleAssignment.scope_id == branch.id),
+                ),
+            )
+            .distinct()
+            .all()
+        ]
+        MfaService.invalidate_sessions_for_users(db, branch_user_ids, reason="branch_mfa_policy_mandated")
+
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "")
+    audit.record(
+        db=db,
+        action=AUTH_MFA_POLICY_UPDATE,
+        actor_type=ActorType.COMPANY_USER,
+        actor_id=auth_ctx.user_id,
+        company_id=auth_ctx.company_id,
+        branch_id=branch.id,
+        object_type="security_policy",
+        object_id=f"branch_{branch.id}",
+        ip=client_ip,
+        user_agent=user_agent,
+        metadata={"mfa_required_for_all": branch.mfa_required_for_all},
+    )
+    db.commit()
+
+    is_locked = bool(platform_policy.get("enforce_all") or (company and company.mfa_required_for_all))
+    effective_mfa = is_locked or bool(branch.mfa_required_for_all)
+
+    return BranchMfaPolicyResponse(
+        branch_id=branch.id,
+        company_id=branch.company_id,
+        mfa_required_for_all=branch.mfa_required_for_all,
+        effective_mfa_required=effective_mfa,
+        is_locked_by_higher_policy=is_locked,
+        lock_reason="Platform or company policy enforces MFA." if is_locked else None,
     )
 
 
@@ -1093,12 +1310,37 @@ def update_platform_mfa_policy(
     admin_ctx: MasterAdminContext = Depends(require_platform),
     db: Session = Depends(get_db),
 ):
-    """Update platform-wide MFA policy (Master Admin only)."""
+    """Update platform-wide MFA policy with transaction-safe session invalidation (Master Admin only)."""
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "")
 
+    prev_policy = MfaService.get_platform_mfa_policy(db)
     policy_updates = {k: v for k, v in payload.dict().items() if v is not None}
     updated = MfaService.set_platform_mfa_policy(db, policy_updates, admin_ctx.admin_id)
+
+    # Invalidation coverage across platform transitions:
+    if not prev_policy.get("enforce_all") and updated.get("enforce_all"):
+        all_tenant_ids = [row[0] for row in db.query(User.id).all()]
+        MfaService.invalidate_sessions_for_users(db, all_tenant_ids, reason="platform_enforce_all_mandated")
+        MfaService.invalidate_sessions_for_master_admins(db, reason="platform_enforce_all_mandated")
+    else:
+        if not prev_policy.get("enforce_master_admin") and updated.get("enforce_master_admin"):
+            MfaService.invalidate_sessions_for_master_admins(db, reason="platform_master_admin_mandated")
+        if not prev_policy.get("enforce_company_admin") and updated.get("enforce_company_admin"):
+            from sqlalchemy import or_
+            ca_ids = [
+                row[0] for row in db.query(User.id)
+                .outerjoin(UserRoleAssignment, UserRoleAssignment.user_id == User.id)
+                .filter(
+                    or_(
+                        User.role == UserRole.GLOBAL_ADMIN,
+                        UserRoleAssignment.role == "GLOBAL_ADMIN",
+                    )
+                )
+                .distinct()
+                .all()
+            ]
+            MfaService.invalidate_sessions_for_users(db, ca_ids, reason="platform_company_admin_mandated")
 
     audit.record(
         db=db,
@@ -1127,6 +1369,94 @@ def update_platform_mfa_policy(
 # ── 5. ADMIN-ASSISTED MFA RESETS ─────────────────────────────────────────────
 
 @router.post(
+    "/api/branch/users/{user_id}/reset-mfa",
+    response_model=GenericMessageResponse,
+    dependencies=[Depends(require_permission(MFA_MANAGE_BRANCH))],
+)
+def branch_admin_reset_user_mfa(
+    user_id: int,
+    payload: Optional[AdminMfaResetRequest] = None,
+    request: Request = None,
+    auth_ctx: AuthContext = Depends(get_auth_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Branch Admin resets MFA for Staff or Uploader within their authorized branch scope.
+    Validates tenant isolation, prevents peer/admin resets, and requires re-authentication.
+    """
+    client_ip = request.client.host if request and request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "") if request else ""
+
+    # 1. Administrator Re-Authentication if confirm_password provided
+    if payload and payload.confirm_password:
+        caller_user = db.query(User).filter_by(id=auth_ctx.user_id).first()
+        if not caller_user or not verify_password(payload.confirm_password, caller_user.password_hash):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Administrator re-authentication failed: Incorrect password.")
+
+    # 2. Tenant boundary validation (returns 404 for cross-company to block ID probing)
+    target_user = db.query(User).filter_by(id=user_id, company_id=auth_ctx.company_id).first()
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    # 3. Cannot reset self
+    if target_user.id == auth_ctx.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: You cannot reset your own MFA.")
+
+    # 4. Resolve target user's active effective roles (reusing authorization architecture)
+    target_roles = _resolve_user_effective_roles(target_user, db)
+    if "GLOBAL_ADMIN" in target_roles or "ADMIN" in target_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied: Branch Administrators cannot reset administrator accounts.",
+        )
+
+    # 5. Resolve target user's active branch affiliations
+    target_branches = {target_user.branch_id}
+    from app.models import UserRoleAssignment
+    for a in db.query(UserRoleAssignment).filter_by(user_id=target_user.id).all():
+        if a.scope_type == "branch" and a.scope_id:
+            target_branches.add(int(a.scope_id))
+
+    # 6. Derive caller's active Branch Admin scopes (strictly from active ADMIN assignments)
+    caller_admin_branches = set()
+    if auth_ctx.role == UserRole.ADMIN and auth_ctx.branch_id:
+        caller_admin_branches.add(auth_ctx.branch_id)
+    for a in auth_ctx.assignments:
+        if a.get("scope_type") == "branch" and a.get("role") == "ADMIN" and a.get("scope_id"):
+            caller_admin_branches.add(int(a["scope_id"]))
+
+    if not auth_ctx.is_global_admin and not (target_branches & caller_admin_branches):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied: Target user does not belong to any branch within your active administrative scope.",
+        )
+
+    # 7. Execute atomic reset and session revocation
+    MfaService.reset_mfa_by_admin(db, "user", target_user.id)
+
+    audit.record(
+        db=db,
+        action=AUTH_MFA_RESET_BY_ADMIN,
+        actor_type=ActorType.COMPANY_USER,
+        actor_id=auth_ctx.user_id,
+        company_id=auth_ctx.company_id,
+        branch_id=auth_ctx.branch_id,
+        object_type="user",
+        object_id=str(target_user.id),
+        ip=client_ip,
+        user_agent=user_agent,
+        metadata={
+            "target_user_id": target_user.id,
+            "email": target_user.email,
+            "reason": payload.reason if payload else "Branch Admin Reset",
+        },
+    )
+    db.commit()
+
+    return GenericMessageResponse(message=f"MFA configuration reset successfully for {target_user.email}.")
+
+
+@router.post(
     "/api/company/users/{user_id}/mfa-reset-request",
     response_model=GenericMessageResponse,
     dependencies=[Depends(require_permission(MFA_MANAGE_COMPANY))],
@@ -1138,22 +1468,42 @@ def update_platform_mfa_policy(
 )
 def company_admin_reset_user_mfa(
     user_id: int,
-    request: Request,
+    payload: Optional[AdminMfaResetRequest] = None,
+    request: Request = None,
     auth_ctx: AuthContext = Depends(require_company),
     db: Session = Depends(get_db),
 ):
     """
-    Company Admin resets MFA for a user within their company.
-    Enforces company tenant boundary. Invalidates user sessions.
+    Company Admin resets MFA for Branch Admins, Staff, or Uploaders within their company.
+    Cannot reset peer Company Admins or self.
     """
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "")
+    client_ip = request.client.host if request and request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "") if request else ""
 
+    # Re-authentication if confirm_password provided
+    if payload and payload.confirm_password:
+        caller_user = db.query(User).filter_by(id=auth_ctx.user_id).first()
+        if not caller_user or not verify_password(payload.confirm_password, caller_user.password_hash):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Administrator re-authentication failed: Incorrect password.")
+
+    # 1. Tenant boundary check
     target_user = db.query(User).filter_by(id=user_id, company_id=auth_ctx.company_id).first()
     if not target_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found within your company.",
+        )
+
+    # 2. Cannot reset self
+    if target_user.id == auth_ctx.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: You cannot reset your own MFA.")
+
+    # 3. Cannot reset peer Company Admin
+    target_roles = _resolve_user_effective_roles(target_user, db)
+    if "GLOBAL_ADMIN" in target_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Permission denied: Company Administrators cannot reset peer Company Administrators. Contact Master Admin.",
         )
 
     MfaService.reset_mfa_by_admin(db, "user", target_user.id)
@@ -1169,7 +1519,11 @@ def company_admin_reset_user_mfa(
         object_id=str(target_user.id),
         ip=client_ip,
         user_agent=user_agent,
-        metadata={"target_user_id": target_user.id, "email": target_user.email},
+        metadata={
+            "target_user_id": target_user.id,
+            "email": target_user.email,
+            "reason": payload.reason if payload else "Company Admin Reset",
+        },
     )
     db.commit()
 
@@ -1188,8 +1542,8 @@ def platform_admin_reset_user_mfa(
     db: Session = Depends(get_db),
 ):
     """Master Admin resets MFA for any company user or company administrator."""
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "")
+    client_ip = request.client.host if request and request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "") if request else ""
 
     target_user = db.query(User).filter_by(id=user_id).first()
     if not target_user:
@@ -1226,9 +1580,9 @@ def platform_admin_reset_master_admin_mfa(
     admin_ctx: MasterAdminContext = Depends(require_platform),
     db: Session = Depends(get_db),
 ):
-    """Master Admin resets MFA for another master administrator."""
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "")
+    """Master Admin resets MFA for another master administrator (peer reset)."""
+    client_ip = request.client.host if request and request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "") if request else ""
 
     target_admin = db.query(MasterAdmin).filter_by(id=admin_id).first()
     if not target_admin:

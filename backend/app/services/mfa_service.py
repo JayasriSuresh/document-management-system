@@ -98,10 +98,8 @@ class MfaService:
 
     @staticmethod
     def generate_recovery_codes(count: int = 8) -> List[str]:
-        """Generate human-readable, cryptographically random recovery codes (XXXX-XXXX-XXXX)."""
-        alphabet = string.ascii_uppercase + string.digits
-        # exclude ambiguous characters like 0, O, 1, I
-        alphabet = alphabet.replace("0", "").replace("O", "").replace("1", "").replace("I", "")
+        """Generate human-readable, cryptographically random recovery codes (XXXX-XXXX-XXXX) using custom Base32 alphabet."""
+        alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # 32 characters, unambiguous (60 bits entropy per code)
         codes = []
         for _ in range(count):
             p1 = "".join(secrets.choice(alphabet) for _ in range(4))
@@ -160,23 +158,59 @@ class MfaService:
     def is_mfa_mandatory_for_user(cls, db: Session, user: User) -> bool:
         """
         Check if MFA is mandatory for a company user.
-        Platform policy overrides company policy:
+        Evaluates hierarchy:
         1. If platform policy enforce_all is True -> mandatory.
-        2. If user is GLOBAL_ADMIN (Company Admin) and platform enforce_company_admin is True -> mandatory.
+        2. If user is GLOBAL_ADMIN (via role or active UserRoleAssignment) and platform enforce_company_admin is True -> mandatory.
         3. If company.mfa_required_for_all is True -> mandatory for all users in that company.
+        4. Multi-Branch: If ANY active branch assigned to user mandates MFA -> mandatory.
         """
         policy = cls.get_platform_mfa_policy(db)
         if policy.get("enforce_all", False):
             return True
 
-        user_role_val = getattr(user.role, "value", user.role)
-        if user_role_val == "GLOBAL_ADMIN" and policy.get("enforce_company_admin", False):
+        # Check if user has active GLOBAL_ADMIN role via primary role or assignment
+        is_global_admin = False
+        if getattr(user.role, "value", user.role) == "GLOBAL_ADMIN":
+            is_global_admin = True
+        else:
+            from app.models import UserRoleAssignment
+            has_ga = db.query(UserRoleAssignment.id).filter(
+                UserRoleAssignment.user_id == user.id,
+                UserRoleAssignment.role == "GLOBAL_ADMIN",
+            ).first()
+            if has_ga:
+                is_global_admin = True
+
+        if is_global_admin and policy.get("enforce_company_admin", False):
             return True
 
         if user.company_id:
             company = db.query(Company).filter_by(id=user.company_id).first()
             if company and company.mfa_required_for_all:
                 return True
+
+            # Multi-Branch Assignment Policy Check
+            from app.models import Branch, UserRoleAssignment
+            branch_ids = set()
+            if user.branch_id:
+                branch_ids.add(user.branch_id)
+
+            branch_assignments = db.query(UserRoleAssignment.scope_id).filter(
+                UserRoleAssignment.user_id == user.id,
+                UserRoleAssignment.scope_type == "branch",
+            ).all()
+            for (b_id,) in branch_assignments:
+                if b_id:
+                    branch_ids.add(int(b_id))
+
+            if branch_ids:
+                mandated_branch = db.query(Branch.id).filter(
+                    Branch.id.in_(branch_ids),
+                    Branch.company_id == user.company_id,
+                    Branch.mfa_required_for_all == True,
+                ).first()
+                if mandated_branch:
+                    return True
 
         return False
 
@@ -556,3 +590,49 @@ class MfaService:
         )
 
         db.commit()
+
+    # ── Policy Transition Invalidation Helpers ──────────────────────────────
+
+    @classmethod
+    def invalidate_sessions_for_users(
+        cls, db: Session, user_ids: List[int], reason: str = "mfa_policy_mandated"
+    ) -> None:
+        """
+        Transaction-safe bulk session revocation and token_version increment
+        for a list of affected user IDs.
+        """
+        if not user_ids:
+            return
+        from app.models import UserSession
+        db.query(UserSession).filter(
+            UserSession.identity_type == "user",
+            UserSession.user_id.in_(user_ids),
+            UserSession.revoked_at.is_(None),
+        ).update(
+            {UserSession.revoked_at: datetime.utcnow(), UserSession.revoke_reason: reason},
+            synchronize_session=False,
+        )
+        db.query(User).filter(User.id.in_(user_ids)).update(
+            {User.token_version: User.token_version + 1},
+            synchronize_session=False,
+        )
+
+    @classmethod
+    def invalidate_sessions_for_master_admins(
+        cls, db: Session, reason: str = "mfa_policy_mandated"
+    ) -> None:
+        """
+        Transaction-safe session revocation and token_version increment for Master Admins.
+        """
+        from app.models import UserSession
+        db.query(UserSession).filter(
+            UserSession.identity_type == "master_admin",
+            UserSession.revoked_at.is_(None),
+        ).update(
+            {UserSession.revoked_at: datetime.utcnow(), UserSession.revoke_reason: reason},
+            synchronize_session=False,
+        )
+        db.query(MasterAdmin).update(
+            {MasterAdmin.token_version: MasterAdmin.token_version + 1},
+            synchronize_session=False,
+        )

@@ -241,7 +241,7 @@ class AuthService:
             target_audience = settings.JWT_AUDIENCE_COMPANY
 
         elif normalized_portal == "app":
-            if user.role not in (UserRole.ADMIN, UserRole.STAFF):
+            if user.role not in (UserRole.ADMIN, UserRole.STAFF, UserRole.UPLOADER):
                 logger.warning(
                     "Cross-portal access denied: user %s (role=%s) cannot access Branch Workspace Portal",
                     user.email,
