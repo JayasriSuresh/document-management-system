@@ -1369,6 +1369,96 @@ class PlatformAIProvider(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class AIModelCatalogue(Base):
+    """Platform-wide AI Model Catalogue managed exclusively by Master Admin."""
+    __tablename__ = "ai_models"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provider_key = Column(String(32), nullable=False, index=True)
+    model_id = Column(String(64), nullable=False, index=True)
+    display_name = Column(String(64), nullable=False)
+    capabilities = Column(JSON, nullable=False, default=lambda: ["ocr", "extraction", "generation"])
+    is_active = Column(Boolean, nullable=False, default=True)
+    metadata_json = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("uq_ai_models_provider_model", "provider_key", "model_id", unique=True),
+    )
+
+
+class CompanyAIModelAssignment(Base):
+    """Company-specific AI Model Assignments configured exclusively by Master Admin."""
+    __tablename__ = "company_ai_model_assignments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id", ondelete="CASCADE", name="fk_company_ai_model_assignments_company_id"),
+        nullable=False,
+        index=True,
+    )
+    task_type = Column(String(32), nullable=False)  # 'ocr', 'extraction', 'generation'
+    provider_key = Column(String(32), nullable=False)
+    model_id = Column(String(64), nullable=False)
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    created_by = Column(
+        Integer,
+        ForeignKey("master_admins.id", ondelete="SET NULL", name="fk_company_ai_model_assignments_created_by"),
+        nullable=True,
+    )
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("uq_company_ai_model_assignments_task", "company_id", "task_type", unique=True),
+    )
+
+    company = relationship("Company", backref="ai_assignments")
+    creator = relationship("MasterAdmin")
+
+
+class CompanyAIModelRequest(Base):
+    """Company Admin requests for specific AI models/providers submitted to Master Admin."""
+    __tablename__ = "company_ai_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    company_id = Column(
+        Integer,
+        ForeignKey("companies.id", ondelete="CASCADE", name="fk_company_ai_requests_company_id"),
+        nullable=False,
+        index=True,
+    )
+    requested_by = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL", name="fk_company_ai_requests_user_id"),
+        nullable=True,
+    )
+    provider_key = Column(String(32), nullable=False)
+    model_id = Column(String(64), nullable=False)
+    task_type = Column(String(32), nullable=False)  # 'ocr', 'extraction', 'generation'
+    reason = Column(Text, nullable=False)
+    status = Column(String(32), nullable=False, default="pending")  # 'pending', 'approved', 'rejected', 'cancelled'
+    decision_by = Column(
+        Integer,
+        ForeignKey("master_admins.id", ondelete="SET NULL", name="fk_company_ai_requests_decision_by"),
+        nullable=True,
+    )
+    decision_reason = Column(Text, nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_company_ai_requests_company_status", "company_id", "status"),
+    )
+
+    company = relationship("Company", backref="ai_model_requests")
+    requester = relationship("User", foreign_keys=[requested_by])
+    decision_maker = relationship("MasterAdmin", foreign_keys=[decision_by])
+
+
 class CompanyAISetting(Base):
     """Company-scoped permitted providers, defaults, and constraints."""
     __tablename__ = "company_ai_settings"
@@ -1381,6 +1471,7 @@ class CompanyAISetting(Base):
         nullable=False,
         index=True,
     )
+    is_ai_enabled = Column(Boolean, nullable=False, default=True)
     allowed_providers = Column(JSON, nullable=False, default=lambda: ["gemini", "openai", "anthropic"])
     default_read_provider = Column(String(32), nullable=True)
     default_read_model = Column(String(64), nullable=True)

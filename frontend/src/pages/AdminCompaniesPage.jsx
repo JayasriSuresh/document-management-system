@@ -5,15 +5,16 @@ import { api } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 import MfaModal from '../components/MfaModal';
 import CompanyDossierView from '../components/CompanyDossierView';
+import MasterAdminAIManagementView from '../components/MasterAdminAIManagementView';
 
 export default function AdminCompaniesPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Active view tab: 'dashboard' | 'companies' | 'onboarding' | 'audit' | 'settings' | 'security' | 'company_detail'
+  // Active view tab: 'dashboard' | 'companies' | 'onboarding' | 'audit' | 'ai' | 'settings' | 'security' | 'company_detail'
   const tabFromUrl = searchParams.get('tab');
-  const validTabs = ['dashboard', 'companies', 'onboarding', 'audit', 'settings', 'security', 'company_detail'];
+  const validTabs = ['dashboard', 'companies', 'onboarding', 'audit', 'ai', 'settings', 'security', 'company_detail'];
   const [activeTab, setActiveTab] = useState(
     validTabs.includes(tabFromUrl) ? (tabFromUrl === 'security' ? 'settings' : tabFromUrl) : 'dashboard'
   );
@@ -932,6 +933,35 @@ export default function AdminCompaniesPage() {
 
           <button
             type="button"
+            onClick={() => switchTab('ai')}
+            className={`nav-link ${activeTab === 'ai' ? 'active' : ''}`}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              textAlign: 'left',
+              border: activeTab === 'ai' ? '1px solid #fca5a5' : '1px solid transparent',
+              backgroundColor: activeTab === 'ai' ? '#fee2e2' : 'transparent',
+              color: activeTab === 'ai' ? '#b91c1c' : '#475569',
+              fontWeight: activeTab === 'ai' ? 600 : 500,
+              cursor: 'pointer',
+              marginBottom: '2px',
+            }}
+          >
+            <span className="nav-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '18px', height: '18px' }}>
+                <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+                <path d="M18 14v4a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-4" />
+                <line x1="12" y1="12" x2="12" y2="18" />
+                <circle cx="12" cy="15" r="1" />
+              </svg>
+            </span>
+            AI &amp; Model Governance
+          </button>
+
+          <button
+            type="button"
             onClick={() => switchTab('settings')}
             className={`nav-link ${activeTab === 'settings' ? 'active' : ''}`}
             style={{
@@ -973,16 +1003,16 @@ export default function AdminCompaniesPage() {
         className={`main-content ${sidebarOpen && typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'with-sidebar' : 'no-sidebar'}`}
         id="main-content"
       >
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
+        <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
 
           {/* Section Header: Platform Dashboard */}
           {activeTab === 'dashboard' && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
                   Platform Dashboard
                 </h2>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                   High-level ecosystem health, active tenant metrics, resource storage, and AI processing volume.
                 </p>
               </div>
@@ -1015,12 +1045,12 @@ export default function AdminCompaniesPage() {
           {/* Section Header: Company Onboarding */}
           {activeTab === 'onboarding' && (
             <>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
                     Company Onboarding
                   </h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                     Review submitted onboarding registrations, request changes, and provision multi-tenant enterprises.
                   </p>
                 </div>
@@ -1030,20 +1060,20 @@ export default function AdminCompaniesPage() {
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '6px',
                     backgroundColor: '#ef233c',
                     color: '#ffffff',
-                    padding: '10px 20px',
-                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    borderRadius: '6px',
                     border: 'none',
                     fontWeight: 600,
-                    fontSize: '14px',
+                    fontSize: '12px',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(239, 35, 60, 0.25)',
+                    boxShadow: '0 1px 3px rgba(239, 35, 60, 0.2)',
                     transition: 'background-color 0.2s',
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <line x1="12" y1="5" x2="12" y2="19" />
                     <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
@@ -1052,22 +1082,22 @@ export default function AdminCompaniesPage() {
               </div>
 
               {/* Stats Row */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Applications</div>
-                  <div style={{ fontSize: '26px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>{stats.total}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Applications</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>{stats.total}</div>
                 </div>
-                <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '10px', border: '1px solid #93c5fd', boxShadow: '0 1px 3px rgba(59,130,246,0.05)' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Under Review</div>
-                  <div style={{ fontSize: '26px', fontWeight: 700, color: '#1d4ed8', marginTop: '6px' }}>{stats.underReview}</div>
+                <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #93c5fd', boxShadow: '0 1px 3px rgba(59,130,246,0.05)' }}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Under Review</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#1d4ed8', marginTop: '2px' }}>{stats.underReview}</div>
                 </div>
-                <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '10px', border: '1px solid #fcd34d', boxShadow: '0 1px 3px rgba(245,158,11,0.05)' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Changes Requested</div>
-                  <div style={{ fontSize: '26px', fontWeight: 700, color: '#b45309', marginTop: '6px' }}>{stats.changesRequested}</div>
+                <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #fcd34d', boxShadow: '0 1px 3px rgba(245,158,11,0.05)' }}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Changes Requested</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#b45309', marginTop: '2px' }}>{stats.changesRequested}</div>
                 </div>
-                <div style={{ backgroundColor: '#ffffff', padding: '18px 20px', borderRadius: '10px', border: '1px solid #86efac', boxShadow: '0 1px 3px rgba(34,197,94,0.05)' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Approved Live Tenants</div>
-                  <div style={{ fontSize: '26px', fontWeight: 700, color: '#15803d', marginTop: '6px' }}>{stats.liveCompanies}</div>
+                <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #86efac', boxShadow: '0 1px 3px rgba(34,197,94,0.05)' }}>
+                  <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Approved Live Tenants</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#15803d', marginTop: '2px' }}>{stats.liveCompanies}</div>
                 </div>
               </div>
 
@@ -1085,13 +1115,13 @@ export default function AdminCompaniesPage() {
                     key={f.key}
                     onClick={() => setStatusFilter(f.key)}
                     style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
+                      padding: '4px 10px',
+                      borderRadius: '16px',
                       border: '1px solid',
                       borderColor: statusFilter === f.key ? '#ef233c' : '#e2e8f0',
                       backgroundColor: statusFilter === f.key ? '#ffedef' : '#ffffff',
                       color: statusFilter === f.key ? '#d90429' : '#475569',
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       fontWeight: 600,
                       cursor: 'pointer',
                       transition: 'all 0.15s',
@@ -1143,12 +1173,12 @@ export default function AdminCompaniesPage() {
 
           {/* Section Header: Live Companies */}
           {activeTab === 'companies' && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
                   Live Companies &amp; Workspaces
                 </h2>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                   Active enterprise tenants, provisioned branches, and corporate workspace management.
                 </p>
               </div>
@@ -1158,20 +1188,20 @@ export default function AdminCompaniesPage() {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
                   backgroundColor: '#ef233c',
                   color: '#ffffff',
-                  padding: '10px 20px',
-                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
                   border: 'none',
                   fontWeight: 600,
-                  fontSize: '14px',
+                  fontSize: '12px',
                   cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(239, 35, 60, 0.25)',
+                  boxShadow: '0 1px 3px rgba(239, 35, 60, 0.2)',
                   transition: 'background-color 0.2s',
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
@@ -1182,23 +1212,35 @@ export default function AdminCompaniesPage() {
 
           {/* Section Header: Platform Audit Logs */}
           {activeTab === 'audit' && (
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
                 Platform Audit Logs
               </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                 Immutable platform-wide audit trail of security, authentication, tenancy, and administrative operations.
+              </p>
+            </div>
+          )}
+
+          {/* Section Header: AI Infrastructure & Model Governance */}
+          {activeTab === 'ai' && (
+            <div style={{ marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+                AI Infrastructure &amp; Model Governance
+              </h2>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+                Centralized platform control over AI foundation providers, encrypted API credentials, model catalogue, company assignments, and company model access requests.
               </p>
             </div>
           )}
 
           {/* Section Header: System Settings & Security */}
           {(activeTab === 'settings' || activeTab === 'security') && (
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
                 System Settings &amp; Security
               </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                 Configure platform defaults for company quotas, AI foundation provider availability, and root security policies.
               </p>
             </div>
@@ -1314,7 +1356,7 @@ export default function AdminCompaniesPage() {
                         </div>
                       </div>
                     </div>
-                    <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
                       ₹{Number(dashboardData?.total_ai_spent_inr !== undefined ? dashboardData?.total_ai_spent_inr : (((dashboardData?.total_ai_spent_cents ?? 0) / 100) * 85)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px', fontWeight: 600 }}>
@@ -1797,6 +1839,19 @@ export default function AdminCompaniesPage() {
             }}
             onToggleStatus={(comp) => {
               handleToggleCompany(comp);
+            }}
+          />
+        ) : activeTab === 'ai' ? (
+          /* ── AI INFRASTRUCTURE & MODEL GOVERNANCE TAB ─────────────────────── */
+          <MasterAdminAIManagementView
+            showToast={(msg, type) => {
+              if (type === 'error') {
+                setError(msg);
+                setTimeout(() => setError(''), 5000);
+              } else {
+                setSettingsSuccess(msg);
+                setTimeout(() => setSettingsSuccess(''), 5000);
+              }
             }}
           />
         ) : (

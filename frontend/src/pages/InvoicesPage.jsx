@@ -202,19 +202,19 @@ export default function InvoicesPage() {
   return (
     <div className="page-content">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: 14 }}>
         <div>
-          <h2 className="page-title">Invoices Repository</h2>
-          <p className="page-subtitle">
+          <h2 className="page-title" style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>Invoices Repository</h2>
+          <p className="page-subtitle" style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
             Manage incoming Standardised Copies (Supplier Invoices) and issue GST-compliant Outbound Sales Invoices.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary" onClick={() => navigate('/documents')}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-secondary" onClick={() => navigate('/documents')} style={{ fontSize: '12px', padding: '6px 12px', borderRadius: '6px' }}>
             View Documents
           </button>
           {hasPermission('invoice.sales_create') && (
-            <button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
+            <button className="btn btn-primary" onClick={() => navigate('/invoices/new')} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '6px', fontWeight: 500 }}>
               + Create Sales Invoice
             </button>
           )}
@@ -225,46 +225,46 @@ export default function InvoicesPage() {
       {error && <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>{error}</div>}
 
       {/* Stats Cards */}
-      <div className="stats-bar">
-        <div className="stat-card">
-          <div className="stat-label">Total Invoices</div>
-          <div className="stat-value">{totalCount}</div>
-          <div className="stat-sub">{copiesCount} Copies · {salesCount} Sales</div>
+      <div className="stats-bar" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+        <div className="stat-card" style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+          <div className="stat-label" style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '2px' }}>Total Invoices</div>
+          <div className="stat-value" style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>{totalCount}</div>
+          <div className="stat-sub" style={{ fontSize: '11px', color: '#94a3b8' }}>{copiesCount} Copies · {salesCount} Sales</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">Total Billed Value</div>
-          <div className="stat-value" style={{ color: 'var(--brand)' }}>
+        <div className="stat-card" style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+          <div className="stat-label" style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '2px' }}>Total Billed Value</div>
+          <div className="stat-value" style={{ fontSize: '20px', fontWeight: 700, color: '#ef233c' }}>
             {formatCurrency(totalBilledValue)}
           </div>
-          <div className="stat-sub">cumulative grand total</div>
+          <div className="stat-sub" style={{ fontSize: '11px', color: '#94a3b8' }}>cumulative grand total</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">Pending Approval</div>
-          <div className="stat-value" style={{ color: pendingCount > 0 ? '#d97706' : 'var(--text-primary)' }}>
+        <div className="stat-card" style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+          <div className="stat-label" style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '2px' }}>Pending Approval</div>
+          <div className="stat-value" style={{ fontSize: '20px', fontWeight: 700, color: pendingCount > 0 ? '#d97706' : '#0f172a' }}>
             {pendingCount}
           </div>
-          <div className="stat-sub">sales invoices awaiting review</div>
+          <div className="stat-sub" style={{ fontSize: '11px', color: '#94a3b8' }}>sales invoices awaiting review</div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">Active Branch</div>
-          <div className="stat-value" style={{ fontSize: '1.15rem', color: 'var(--text-primary)' }}>
+        <div className="stat-card" style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
+          <div className="stat-label" style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#64748b', marginBottom: '2px' }}>Active Branch</div>
+          <div className="stat-value" style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
             {user?.tenant_name || 'Organization'}
           </div>
-          <div className="stat-sub">{user?.role} Access</div>
+          <div className="stat-sub" style={{ fontSize: '11px', color: '#94a3b8' }}>{user?.role} Access</div>
         </div>
       </div>
 
       {/* Filter Tabs & Search Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', gap: '8px', flexWrap: 'wrap' }}>
         {/* Tabs */}
-        <div style={{ display: 'inline-flex', background: 'var(--bg-subtle)', padding: '0.25rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: '3px', borderRadius: '6px', border: '1px solid #e2e8f0', gap: '2px' }}>
           <button
             type="button"
             className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            style={{ borderRadius: '4px', fontSize: '12px', padding: '4px 10px', height: '28px' }}
             onClick={() => setActiveTab('all')}
           >
             All Invoices ({totalCount})
@@ -272,7 +272,7 @@ export default function InvoicesPage() {
           <button
             type="button"
             className={`btn btn-sm ${activeTab === 'copy' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            style={{ borderRadius: '4px', fontSize: '12px', padding: '4px 10px', height: '28px' }}
             onClick={() => setActiveTab('copy')}
           >
             Standardised Copies ({copiesCount})
@@ -280,7 +280,7 @@ export default function InvoicesPage() {
           <button
             type="button"
             className={`btn btn-sm ${activeTab === 'generated' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ borderRadius: 'var(--radius-sm)' }}
+            style={{ borderRadius: '4px', fontSize: '12px', padding: '4px 10px', height: '28px' }}
             onClick={() => setActiveTab('generated')}
           >
             Sales Invoices ({salesCount})
@@ -288,13 +288,12 @@ export default function InvoicesPage() {
         </div>
 
         {/* Filter Controls: Status and Invoice Type */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Status Dropdown Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Status:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Status:</label>
             <select
-              className="form-control"
-              style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
+              style={{ width: 'auto', padding: '5px 10px', fontSize: '12px', height: '34px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff' }}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -308,11 +307,10 @@ export default function InvoicesPage() {
           </div>
 
           {/* Invoice Type Dropdown Filter */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <label style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', fontWeight: 500 }}>Invoice Type:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>Type:</label>
             <select
-              className="form-control"
-              style={{ width: 'auto', padding: '0.35rem 0.75rem', fontSize: '0.8125rem' }}
+              style={{ width: 'auto', padding: '5px 10px', fontSize: '12px', height: '34px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff' }}
               value={invoiceTypeFilter}
               onChange={(e) => setInvoiceTypeFilter(e.target.value)}
             >
@@ -326,17 +324,19 @@ export default function InvoicesPage() {
       </div>
 
       {/* Search Bar */}
-      <form onSubmit={handleSearch} className="search-bar" style={{ marginBottom: '1.5rem' }}>
-        <span className="search-icon">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </span>
-        <input
-          type="text"
-          className="search-input"
-          placeholder="Search by Invoice Number, Customer, Seller, or original document..."
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-        />
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+          <span style={{ position: 'absolute', left: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Search by Invoice Number, Customer, Seller, or original document..."
+            value={inputVal}
+            onChange={(e) => setInputVal(e.target.value)}
+            style={{ width: '100%', height: '34px', fontSize: '12px', padding: '5px 10px 5px 32px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+          />
+        </div>
         {inputVal && (
           <button
             type="button"
@@ -345,26 +345,31 @@ export default function InvoicesPage() {
               setInputVal('');
               setSearch('');
             }}
+            style={{ height: '34px', fontSize: '12px', padding: '0 10px' }}
           >
             Clear
           </button>
         )}
-        <button type="submit" className="btn btn-primary btn-sm">
+        <button
+          type="submit"
+          className="btn btn-primary btn-sm"
+          style={{ height: '34px', fontSize: '12px', padding: '0 14px', borderRadius: '6px' }}
+        >
           Search
         </button>
       </form>
 
       {/* Invoices Table */}
-      <div className="table-container">
-        <div className="table-header-bar">
-          <span className="table-header-bar-title">
+      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ padding: '8px 14px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
             {activeTab === 'copy'
               ? 'Standardised Copies (Supplier Invoices)'
               : activeTab === 'generated'
               ? 'Outbound Sales Invoices'
               : 'All Invoices'}
           </span>
-          <span className="table-header-bar-count">
+          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#f1f5f9', color: '#64748b' }}>
             {invoices.length} {invoices.length === 1 ? 'record' : 'records'}
           </span>
         </div>
@@ -372,47 +377,47 @@ export default function InvoicesPage() {
         {loading && invoices.length === 0 ? (
           <div className="loading-state" style={{ padding: '3rem', textAlign: 'center' }}>
             <div className="spinner" />
-            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading invoices…</p>
+            <p style={{ marginTop: '1rem', color: '#64748b', fontSize: '13px' }}>Loading invoices…</p>
           </div>
         ) : invoices.length === 0 ? (
           <div style={{ padding: '3rem 2rem', textAlign: 'center' }}>
-            <div style={{ width: '52px', height: '52px', margin: '0 auto 1rem', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <div style={{ width: '48px', height: '48px', margin: '0 auto 1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             </div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.25rem' }}>
               No invoices found
             </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
+            <p style={{ color: '#64748b', fontSize: '13px', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
               {activeTab === 'generated'
                 ? 'Create your first outbound sales invoice using the button below.'
                 : 'Upload and process documents to generate standardised copies.'}
             </p>
             {activeTab === 'generated' ? (
               hasPermission('invoice.sales_create') ? (
-                <button className="btn btn-primary" onClick={() => navigate('/invoices/new')}>
+                <button className="btn btn-primary" onClick={() => navigate('/invoices/new')} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '6px' }}>
                   Create Sales Invoice
                 </button>
               ) : null
             ) : (
-              <button className="btn btn-primary" onClick={() => navigate('/documents')}>
+              <button className="btn btn-primary" onClick={() => navigate('/documents')} style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '6px' }}>
                 Browse Documents
               </button>
             )}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="doc-table">
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table style={{ width: '100%', tableLayout: 'fixed', minWidth: '840px', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Invoice No.</th>
-                  <th>Date</th>
-                  <th>Billed By (Seller)</th>
-                  <th>Billed To (Buyer)</th>
-                  <th>Grand Total</th>
-                  <th>Status</th>
-                  <th>Source / FY</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <th style={{ padding: '8px 10px', width: '10%' }}>Type</th>
+                  <th style={{ padding: '8px 10px', width: '13%' }}>Invoice No.</th>
+                  <th style={{ padding: '8px 10px', width: '8%' }}>Date</th>
+                  <th style={{ padding: '8px 10px', width: '17%' }}>Billed By (Seller)</th>
+                  <th style={{ padding: '8px 10px', width: '15%' }}>Billed To (Buyer)</th>
+                  <th style={{ padding: '8px 10px', width: '10%' }}>Grand Total</th>
+                  <th style={{ padding: '8px 10px', width: '8%' }}>Status</th>
+                  <th style={{ padding: '8px 10px', width: '10%' }}>Source / FY</th>
+                  <th style={{ padding: '8px 10px', width: '9%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -421,68 +426,48 @@ export default function InvoicesPage() {
                   const isSales = inv.kind === 'generated';
 
                   return (
-                    <tr key={`${inv.kind}-${inv.id}`}>
+                    <tr key={`${inv.kind}-${inv.id}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       {/* Type Badge */}
-                      <td>
-                        <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '0.2rem' }}>
-                          <span
-                            style={{
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              background: '#fef2f2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca',
-                              padding: '0.15rem 0.45rem',
-                              borderRadius: 'var(--radius-sm)',
-                              letterSpacing: '0.02em',
-                              display: 'inline-block',
-                            }}
-                          >
-                            {inv.invoice_type || 'Tax Invoice'}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 600,
-                              color: isCopy ? '#0369a1' : '#047857',
-                              background: isCopy ? '#e0f2fe' : '#ecfdf5',
-                              padding: '0.08rem 0.35rem',
-                              borderRadius: 'var(--radius-sm)',
-                              display: 'inline-block',
-                              width: 'fit-content',
-                            }}
-                          >
-                            {isCopy ? (inv.copy_version ? `Copy v${inv.copy_version}` : 'Standardised Copy') : 'Sales Invoice'}
-                          </span>
-                          {inv.is_stale && (
-                            <span
-                              style={{
-                                fontSize: '0.65rem',
-                                fontWeight: 600,
-                                background: '#fffbeb',
-                                color: '#b45309',
-                                border: '1px solid #fde68a',
-                                padding: '0.08rem 0.35rem',
-                                borderRadius: 'var(--radius-sm)',
-                              }}
-                            >
-                              ⚠️ Stale
-                            </span>
-                          )}
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '11.5px', whiteSpace: 'nowrap' }}>
+                          {inv.invoice_type || 'Tax Invoice'}
                         </div>
+                        <div style={{ fontSize: '10px', color: isCopy ? '#0284c7' : '#16a34a', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                          {isCopy ? (inv.copy_version ? `Copy v${inv.copy_version}` : 'Standardised') : 'Sales Invoice'}
+                        </div>
+                        {inv.is_stale && (
+                          <span
+                            style={{
+                              fontSize: '9.5px',
+                              fontWeight: 600,
+                              background: '#fffbeb',
+                              color: '#b45309',
+                              border: '1px solid #fde68a',
+                              padding: '1px 4px',
+                              borderRadius: '3px',
+                              display: 'inline-block',
+                              marginTop: '2px',
+                            }}
+                          >
+                            ⚠️ Stale
+                          </span>
+                        )}
                       </td>
 
                       {/* Invoice Number */}
-                      <td>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         <span
                           style={{
                             fontFamily: 'monospace',
-                            fontWeight: 700,
-                            color: inv.invoice_number ? 'var(--brand)' : 'var(--text-muted)',
-                            background: inv.invoice_number ? 'var(--brand-light)' : 'var(--bg-subtle)',
-                            padding: '0.2rem 0.45rem',
-                            borderRadius: 'var(--radius-sm)',
+                            fontWeight: 600,
+                            fontSize: '11px',
+                            color: inv.invoice_number ? '#ef233c' : '#64748b',
+                            backgroundColor: inv.invoice_number ? '#fff1f2' : '#f8fafc',
+                            padding: '1px 5px',
+                            borderRadius: '4px',
+                            border: inv.invoice_number ? '1px solid #fecdd3' : '1px solid #e2e8f0',
                             display: 'inline-block',
+                            whiteSpace: 'nowrap',
                             fontStyle: inv.invoice_number ? 'normal' : 'italic',
                           }}
                         >
@@ -491,39 +476,40 @@ export default function InvoicesPage() {
                       </td>
 
                       {/* Date */}
-                      <td>
-                        <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '11.5px', color: '#475569', whiteSpace: 'nowrap' }}>
                           {inv.invoice_date || formatDate(inv.created_at)}
                         </span>
                       </td>
 
                       {/* Billed By */}
-                      <td>
-                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }} title={inv.seller_name}>
                           {inv.seller_name || '—'}
                         </div>
                         {inv.seller_gstin && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                          <div style={{ fontSize: '10.5px', color: '#64748b', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
                             GST: {inv.seller_gstin}
                           </div>
                         )}
                       </td>
 
                       {/* Billed To */}
-                      <td>
-                        <div style={{ fontWeight: 500, color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                        <div style={{ fontWeight: 500, color: '#334155', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }} title={inv.buyer_name || inv.customer_name}>
                           {inv.buyer_name || inv.customer_name || '—'}
                         </div>
                       </td>
 
                       {/* Grand Total */}
-                      <td>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         <span
                           style={{
                             fontWeight: 700,
-                            fontSize: '0.9375rem',
-                            color: inv.status === 'cancelled' ? 'var(--text-muted)' : 'var(--success)',
+                            fontSize: '12px',
+                            color: inv.status === 'cancelled' ? '#94a3b8' : '#166534',
                             textDecoration: inv.status === 'cancelled' ? 'line-through' : 'none',
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           {formatCurrency(inv.grand_total, inv.currency)}
@@ -531,23 +517,24 @@ export default function InvoicesPage() {
                       </td>
 
                       {/* Status */}
-                      <td>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         <span
                           style={{
-                            fontSize: '0.75rem',
+                            fontSize: '10.5px',
                             fontWeight: 600,
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: 'var(--radius-sm)',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
                             textTransform: 'capitalize',
                             display: 'inline-block',
-                            background:
+                            whiteSpace: 'nowrap',
+                            backgroundColor:
                               inv.status === 'approved' || inv.status === 'available'
                                 ? '#f0fdf4'
                                 : inv.status === 'pending_approval'
                                 ? '#fffbeb'
                                 : inv.status === 'cancelled'
                                 ? '#fef2f2'
-                                : '#f3f4f6',
+                                : '#f1f5f9',
                             color:
                               inv.status === 'approved' || inv.status === 'available'
                                 ? '#15803d'
@@ -555,7 +542,7 @@ export default function InvoicesPage() {
                                 ? '#b45309'
                                 : inv.status === 'cancelled'
                                 ? '#b91c1c'
-                                : '#4b5563',
+                                : '#475569',
                             border: `1px solid ${
                               inv.status === 'approved' || inv.status === 'available'
                                 ? '#bbf7d0'
@@ -563,7 +550,7 @@ export default function InvoicesPage() {
                                 ? '#fde68a'
                                 : inv.status === 'cancelled'
                                 ? '#fecaca'
-                                : '#e5e7eb'
+                                : '#cbd5e1'
                             }`,
                           }}
                         >
@@ -572,39 +559,54 @@ export default function InvoicesPage() {
                       </td>
 
                       {/* Source Document or FY */}
-                      <td>
+                      <td style={{ padding: '7px 10px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                         {isCopy && inv.document_id ? (
                           <button
                             onClick={() => navigate(`/documents/${inv.document_id}`)}
-                            className="btn btn-ghost btn-sm"
                             style={{
+                              background: 'none',
+                              border: 'none',
                               textAlign: 'left',
-                              padding: '0.2rem 0.4rem',
-                              fontSize: '0.8125rem',
-                              color: 'var(--text-secondary)',
-                              textDecoration: 'underline',
+                              padding: 0,
+                              fontSize: '11px',
+                              color: '#ef233c',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              maxWidth: '120px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
                             }}
                             title={inv.original_filename}
                           >
-                            📄 {inv.original_filename?.length > 18
-                              ? inv.original_filename.slice(0, 16) + '…'
-                              : inv.original_filename || `Doc #${inv.document_id}`}
+                            📄 {inv.original_filename || `Doc #${inv.document_id}`}
                           </button>
                         ) : (
-                          <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>
                             {inv.financial_year ? `FY ${inv.financial_year}` : inv.tenant_name || '—'}
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: '4px', alignItems: 'center' }}>
                           {isCopy ? (
                             <>
                               <button
-                                className="btn btn-secondary btn-sm"
                                 onClick={() => setPreviewInvoice(inv)}
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '5px',
+                                  border: '1px solid #cbd5e1',
+                                  backgroundColor: '#ffffff',
+                                  color: '#334155',
+                                  fontSize: '11.5px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
                                 title="Quick View Standardised Copy"
                               >
                                 View
@@ -614,7 +616,17 @@ export default function InvoicesPage() {
                                 download={`supplier_copy_${inv.id}.pdf`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="btn btn-primary btn-sm"
+                                style={{
+                                  padding: '4px 8px',
+                                  borderRadius: '5px',
+                                  border: '1px solid #cbd5e1',
+                                  backgroundColor: '#ffffff',
+                                  color: '#ef233c',
+                                  fontSize: '11.5px',
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  display: 'inline-block',
+                                }}
                                 title="Download PDF"
                               >
                                 Download
@@ -626,23 +638,46 @@ export default function InvoicesPage() {
                               {inv.status === 'draft' && (
                                 <>
                                   <button
-                                    className="btn btn-secondary btn-sm"
                                     onClick={() => navigate(`/invoices/${inv.id}/edit`)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor: '#ffffff',
+                                      color: '#334155',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     Edit
                                   </button>
                                   <button
-                                    className="btn btn-primary btn-sm"
                                     onClick={() => handleSubmitDraft(inv.id)}
                                     disabled={actionLoading}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: 'none',
+                                      backgroundColor: '#ef233c',
+                                      color: '#ffffff',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     Submit
                                   </button>
                                   <button
-                                    className="btn btn-ghost btn-sm"
-                                    style={{ color: 'var(--danger)', padding: '0.2rem 0.4rem' }}
                                     onClick={() => handleDiscardDraft(inv.id)}
                                     title="Discard Draft"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#dc2626',
+                                      padding: '2px 4px',
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     🗑️
                                   </button>
@@ -651,19 +686,36 @@ export default function InvoicesPage() {
 
                               {inv.status === 'pending_approval' && (
                                 <button
-                                  className="btn btn-primary btn-sm"
-                                  style={{ background: '#d97706', borderColor: '#d97706' }}
                                   onClick={() => setApprovalModalInvoice(inv)}
+                                  style={{
+                                    padding: '4px 10px',
+                                    borderRadius: '5px',
+                                    border: 'none',
+                                    backgroundColor: '#d97706',
+                                    color: '#ffffff',
+                                    fontSize: '11.5px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
                                 >
-                                  Review & Approve
+                                  Review
                                 </button>
                               )}
 
                               {inv.status === 'approved' && (
                                 <>
                                   <button
-                                    className="btn btn-secondary btn-sm"
                                     onClick={() => setPreviewInvoice(inv)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor: '#ffffff',
+                                      color: '#334155',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     View
                                   </button>
@@ -672,14 +724,30 @@ export default function InvoicesPage() {
                                     download={`sales_invoice_${inv.invoice_number ? inv.invoice_number.replace(/\//g, '_') : inv.id}.pdf`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="btn btn-primary btn-sm"
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor: '#ffffff',
+                                      color: '#ef233c',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      textDecoration: 'none',
+                                      display: 'inline-block',
+                                    }}
                                   >
                                     Download
                                   </a>
                                   <button
-                                    className="btn btn-ghost btn-sm"
-                                    style={{ color: 'var(--danger)', fontSize: '0.75rem' }}
                                     onClick={() => setCancelModalInvoice(inv)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#dc2626',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     Cancel
                                   </button>
@@ -689,12 +757,21 @@ export default function InvoicesPage() {
                               {inv.status === 'cancelled' && (
                                 <>
                                   <button
-                                    className="btn btn-secondary btn-sm"
                                     onClick={() => setPreviewInvoice(inv)}
+                                    style={{
+                                      padding: '4px 8px',
+                                      borderRadius: '5px',
+                                      border: '1px solid #cbd5e1',
+                                      backgroundColor: '#ffffff',
+                                      color: '#334155',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                    }}
                                   >
                                     View
                                   </button>
-                                  <span style={{ fontSize: '0.75rem', color: 'var(--danger)', fontStyle: 'italic' }}>
+                                  <span style={{ fontSize: '11px', color: '#dc2626', fontStyle: 'italic' }}>
                                     Cancelled
                                   </span>
                                 </>

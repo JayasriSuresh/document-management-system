@@ -77,7 +77,7 @@ def setup_test_data(client):
         db.commit()
         return {
             "company_id": company.id,
-            "branch_id": branch.id,
+            "branch_id": admin_creator.branch_id if admin_creator else branch.id,
             "gst_reg_id": gst_reg.id,
             "customer_id": customer.id,
             "creator_email": "samrethi@example.com",
@@ -281,8 +281,11 @@ def test_independent_numbering_across_gst_registrations(client, auth_headers, se
         db.commit()
         db.refresh(gst_b)
 
-    import uuid
-    series_code = "S" + uuid.uuid4().hex[:2].upper()
+    import random, string
+    while True:
+        series_code = "S" + "".join(random.choices(string.ascii_uppercase, k=2))
+        if not db.query(NumberSequence).filter_by(company_id=comp_id, financial_year="2026-27", series_code=series_code).first():
+            break
     expected_number = f"{series_code}/2026-27/0001"
 
     # Dedicated sequence starting at 1 for both registrations

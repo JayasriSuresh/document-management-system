@@ -9,6 +9,7 @@ import BranchAIConfigModal from '../components/BranchAIConfigModal';
 import TemplateManagementView from '../components/TemplateManagementView';
 import CompanyAIUsageReportView from '../components/CompanyAIUsageReportView';
 import CompanyJobsView from '../components/CompanyJobsView';
+import DocumentsPage from './DocumentsPage';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chandigarh',
@@ -112,7 +113,7 @@ export default function CompanyAdminPortalPage({ defaultTab = 'dashboard' }) {
   }, [refreshCompanyMeta]);
 
   return (
-    <div className="company-portal-view" style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px 48px' }}>
+    <div className="company-portal-view" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
       {/* Toast Notification Banner */}
       {toastMessage && (
             <div style={{
@@ -172,10 +173,7 @@ export default function CompanyAdminPortalPage({ defaultTab = 'dashboard' }) {
           )}
 
           {activeTab === 'documents' && (
-            <DocumentArchiveView
-              branchesList={branchesList}
-              showToast={showToast}
-            />
+            <DocumentsPage isArchiveView={true} />
           )}
 
           {activeTab === 'templates' && (
@@ -381,10 +379,10 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
       {/* ── Section Header ────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
             Company Operational Dashboard
           </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
             Operational health, branch distribution, OCR throughput, and financial visibility for <strong>{company?.display_name || company?.name}</strong>.
           </p>
         </div>
@@ -792,7 +790,7 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
             </div>
           </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
             {documents.storage_used_mb !== undefined ? documents.storage_used_mb : ((quotas?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB
             <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}> / {((quotas?.storage_limit_bytes || 0) / (1024 * 1024 * 1024)).toFixed(0)} GB</span>
           </div>
@@ -1004,49 +1002,49 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
 
         {/* Breakdown by Kind Table */}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                <th style={{ padding: '10px 12px' }}>Invoice Kind</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Count</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Taxable Value</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>GST Tax</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Grand Total</th>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <th style={{ padding: '8px 10px' }}>Invoice Kind</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Count</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Taxable Value</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>GST Tax</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Grand Total</th>
               </tr>
             </thead>
             <tbody>
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>
+                <td style={{ padding: '7px 10px', fontWeight: 600, color: '#0f172a' }}>
                   Supplier Invoices (Uploaded Copies)
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                   {formatNumber(invoices.by_kind?.copy?.count || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.copy?.taxable || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.copy?.tax || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.copy?.grand_total || 0)}
                 </td>
               </tr>
 
               <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>
+                <td style={{ padding: '7px 10px', fontWeight: 600, color: '#0f172a' }}>
                   Outbound Sales Invoices (Generated)
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                   {formatNumber(invoices.by_kind?.generated?.count || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.generated?.taxable || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.generated?.tax || 0)}
                 </td>
-                <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                <td style={{ padding: '7px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
                   {formatCurrencyINR(invoices.by_kind?.generated?.grand_total || 0)}
                 </td>
               </tr>
@@ -1076,31 +1074,31 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '10px 12px' }}>Branch Name</th>
-                  <th style={{ padding: '10px 12px' }}>Code</th>
-                  <th style={{ padding: '10px 12px' }}>Status</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Documents</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Storage Volume</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Failed Jobs</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <th style={{ padding: '8px 10px' }}>Branch Name</th>
+                  <th style={{ padding: '8px 10px' }}>Code</th>
+                  <th style={{ padding: '8px 10px' }}>Status</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Documents</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Storage Volume</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Failed Jobs</th>
                 </tr>
               </thead>
               <tbody>
                 {branch_distribution.map((b) => (
                   <tr key={b.branch_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>
+                    <td style={{ padding: '7px 10px', fontWeight: 600, color: '#0f172a' }}>
                       {b.branch_name}
                     </td>
-                    <td style={{ padding: '12px', color: '#64748b', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '7px 10px', color: '#64748b', fontFamily: 'monospace' }}>
                       {b.branch_code}
                     </td>
-                    <td style={{ padding: '12px' }}>
+                    <td style={{ padding: '7px 10px' }}>
                       <span style={{
-                        padding: '2px 8px',
+                        padding: '1px 6px',
                         borderRadius: '4px',
-                        fontSize: '11px',
+                        fontSize: '10.5px',
                         fontWeight: 700,
                         backgroundColor: b.status === 'active' ? '#dcfce7' : '#fee2e2',
                         color: b.status === 'active' ? '#166534' : '#991b1b',
@@ -1108,13 +1106,13 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
                         {b.status || 'active'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                       {formatNumber(b.document_count)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', color: '#475569' }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right', color: '#475569' }}>
                       {b.storage_mb} MB
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                       {b.failed_count > 0 ? (
                         <span style={{
                           padding: '2px 8px',
@@ -1220,23 +1218,23 @@ function CompanyDashboardView({ switchTab, showToast, branchesList = [] }) {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '10px 12px' }}>Timestamp</th>
-                  <th style={{ padding: '10px 12px' }}>Action</th>
-                  <th style={{ padding: '10px 12px' }}>Actor</th>
-                  <th style={{ padding: '10px 12px' }}>Target Object</th>
-                  <th style={{ padding: '10px 12px' }}>IP Address</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <th style={{ padding: '8px 10px' }}>Timestamp</th>
+                  <th style={{ padding: '8px 10px' }}>Action</th>
+                  <th style={{ padding: '8px 10px' }}>Actor</th>
+                  <th style={{ padding: '8px 10px' }}>Target Object</th>
+                  <th style={{ padding: '8px 10px' }}>IP Address</th>
                 </tr>
               </thead>
               <tbody>
                 {recent_activity.map((act) => (
                   <tr key={act.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 12px', color: '#64748b' }}>
+                    <td style={{ padding: '7px 10px', color: '#64748b' }}>
                       {act.occurred_at ? new Date(act.occurred_at).toLocaleString() : '—'}
                     </td>
-                    <td style={{ padding: '10px 12px' }}>
+                    <td style={{ padding: '7px 10px' }}>
                       <span style={{
                         padding: '2px 8px',
                         borderRadius: '4px',
@@ -1445,29 +1443,29 @@ function CompanyProfileView({ showToast, onProfileUpdated }) {
     .toUpperCase() || 'CO';
 
   return (
-    <div style={{ maxWidth: '960px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
           Company Profile &amp; Settings
         </h2>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
           Manage your organization branding, official logo, company name, and registration records.
         </p>
       </div>
 
       {formError && (
-        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '14px 18px', borderRadius: '8px', color: '#991b1b', marginBottom: '24px', fontSize: '14px' }}>
+        <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '10px 14px', borderRadius: '6px', color: '#991b1b', fontSize: '13px' }}>
           <strong>Error:</strong> {formError}
         </div>
       )}
 
       {/* ── Visual Branding & Logo Card ──────────────────────── */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '14px', marginBottom: '18px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px', color: '#1e293b' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '20px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#1e293b' }}>
             Company Logo &amp; Navigation Sidebar Brand
           </h3>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '12.5px' }}>
             Upload your company logo to display in the main navigation sidebar, issued invoices, and portal headers.
           </p>
         </div>
@@ -1637,10 +1635,10 @@ function CompanyProfileView({ showToast, onProfileUpdated }) {
         </div>
       </div>
 
-      <form onSubmit={handleSave} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <form onSubmit={handleSave} style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '20px 24px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
         {/* Section 1: Entity Identity */}
-        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '20px', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 16px', color: '#1e293b' }}>
+        <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '18px', marginBottom: '20px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 14px', color: '#1e293b' }}>
             Enterprise Identification &amp; Names
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
@@ -2065,10 +2063,10 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
             Branch Management
           </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
             Provision, inspect, and maintain regional branches, offices, and GST entities under your enterprise.
           </p>
         </div>
@@ -2174,46 +2172,46 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
             No branches match your filters.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                <th style={{ padding: '12px 16px' }}>Branch</th>
-                <th style={{ padding: '12px 16px' }}>Code</th>
-                <th style={{ padding: '12px 16px' }}>Location / State</th>
-                <th style={{ padding: '12px 16px' }}>GSTIN</th>
-                <th style={{ padding: '12px 16px' }}>Users</th>
-                <th style={{ padding: '12px 16px' }}>Status</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <th style={{ padding: '8px 10px' }}>Branch</th>
+                <th style={{ padding: '8px 10px' }}>Code</th>
+                <th style={{ padding: '8px 10px' }}>Location / State</th>
+                <th style={{ padding: '8px 10px' }}>GSTIN</th>
+                <th style={{ padding: '8px 10px' }}>Users</th>
+                <th style={{ padding: '8px 10px' }}>Status</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredBranches.map((b) => (
                 <tr key={b.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '14px 16px' }}>
+                  <td style={{ padding: '7px 10px' }}>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{b.name}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>{b.branch_type || 'Branch'}</div>
+                    <div style={{ fontSize: '10.5px', color: '#64748b' }}>{b.branch_type || 'Branch'}</div>
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#b91c1c', backgroundColor: '#fee2e2', padding: '2px 6px', borderRadius: '4px' }}>
+                  <td style={{ padding: '7px 10px' }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#b91c1c', backgroundColor: '#fee2e2', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>
                       {b.code}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', color: '#334155' }}>
+                  <td style={{ padding: '7px 10px', color: '#334155' }}>
                     <div>{b.city || '—'}, {b.state || '—'}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{b.pincode}</div>
+                    <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>{b.pincode}</div>
                   </td>
-                  <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontSize: '12px', color: b.gstin ? '#0f172a' : '#94a3b8' }}>
+                  <td style={{ padding: '7px 10px', fontFamily: 'monospace', fontSize: '11.5px', color: b.gstin ? '#0f172a' : '#94a3b8' }}>
                     {b.gstin || 'Non-GST'}
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
+                  <td style={{ padding: '7px 10px' }}>
                     <span style={{ fontWeight: 600, color: '#1e293b' }}>{b.active_user_count ?? b.user_count ?? 0}</span> active
                     {(b.total_user_count || b.user_count || 0) > (b.active_user_count ?? b.user_count ?? 0) && ` (${b.total_user_count || b.user_count} total)`}
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
+                  <td style={{ padding: '7px 10px' }}>
                     <span style={{
-                      padding: '3px 9px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '10.5px',
                       fontWeight: 700,
                       backgroundColor: b.status === 'active' ? '#ecfdf5' : '#fef2f2',
                       color: b.status === 'active' ? '#047857' : '#b91c1c',
@@ -2222,7 +2220,7 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
                       {(b.status || 'active').toUpperCase()}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                     <div style={{ display: 'inline-flex', gap: '8px' }}>
                       <button
                         onClick={() => setViewBranch(b)}
@@ -3007,10 +3005,10 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
             User Management &amp; Role Assignments
           </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
             Invite, supervise, and configure multi-branch authorizations for all personnel across your enterprise.
           </p>
         </div>
@@ -3153,30 +3151,30 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
                 No personnel found matching the criteria.
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '12px 16px' }}>User Details</th>
-                    <th style={{ padding: '12px 16px' }}>Role</th>
-                    <th style={{ padding: '12px 16px' }}>Branch Scopes</th>
-                    <th style={{ padding: '12px 16px' }}>MFA Security</th>
-                    <th style={{ padding: '12px 16px' }}>Status</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    <th style={{ padding: '8px 10px' }}>User Details</th>
+                    <th style={{ padding: '8px 10px' }}>Role</th>
+                    <th style={{ padding: '8px 10px' }}>Branch Scopes</th>
+                    <th style={{ padding: '8px 10px' }}>MFA Security</th>
+                    <th style={{ padding: '8px 10px' }}>Status</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         <div style={{ fontWeight: 600, color: '#0f172a' }}>{u.name}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>{u.email}</div>
-                        {u.mobile && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{u.mobile}</div>}
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{u.email}</div>
+                        {u.mobile && <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>{u.mobile}</div>}
                       </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         <span style={{
-                          padding: '3px 8px',
+                          padding: '2px 7px',
                           borderRadius: '4px',
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: 700,
                           backgroundColor: u.role === 'GLOBAL_ADMIN' ? '#fee2e2' : u.role === 'ADMIN' ? '#eff6ff' : '#f1f5f9',
                           color: u.role === 'GLOBAL_ADMIN' ? '#b91c1c' : u.role === 'ADMIN' ? '#1d4ed8' : '#475569',
@@ -3185,25 +3183,25 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
                           {u.role === 'GLOBAL_ADMIN' ? 'Company Admin' : u.role === 'ADMIN' ? 'Branch Admin' : 'Staff / Uploader'}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         {u.role === 'GLOBAL_ADMIN' ? (
-                          <span style={{ color: '#b91c1c', fontWeight: 600, fontSize: '12px' }}>Company-Wide (All Branches)</span>
+                          <span style={{ color: '#b91c1c', fontWeight: 600, fontSize: '11.5px' }}>Company-Wide (All Branches)</span>
                         ) : (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                            <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '1px 5px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 }}>
                               {u.branch_name || u.primary_branch_name || (u.branch_id || u.primary_branch_id ? `Branch #${u.branch_id || u.primary_branch_id}` : 'Unassigned')} (Primary)
                             </span>
                             {u.assigned_branches && u.assigned_branches
                               .filter(ab => (ab.branch_id || ab.id) && String(ab.branch_id || ab.id) !== String(u.branch_id || u.primary_branch_id))
                               .map((ab) => (
-                                <span key={ab.branch_id || ab.id} style={{ backgroundColor: '#eef2ff', color: '#4338ca', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>
+                                <span key={ab.branch_id || ab.id} style={{ backgroundColor: '#eef2ff', color: '#4338ca', padding: '1px 5px', borderRadius: '4px', fontSize: '10.5px' }}>
                                   {ab.branch_name || ab.name || ab.branch_code || ab.code || `Branch #${ab.branch_id || ab.id}`}
                                 </span>
                               ))}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         <span style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -3317,15 +3315,15 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
               No pending invitations found.
             </div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                  <th style={{ padding: '12px 16px' }}>Invited Email</th>
-                  <th style={{ padding: '12px 16px' }}>Assigned Role</th>
-                  <th style={{ padding: '12px 16px' }}>Branch</th>
-                  <th style={{ padding: '12px 16px' }}>Expires At</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <th style={{ padding: '8px 10px' }}>Invited Email</th>
+                  <th style={{ padding: '8px 10px' }}>Assigned Role</th>
+                  <th style={{ padding: '8px 10px' }}>Branch</th>
+                  <th style={{ padding: '8px 10px' }}>Expires At</th>
+                  <th style={{ padding: '8px 10px' }}>Status</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -3340,12 +3338,12 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
 
                   return (
                     <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0f172a' }}>{inv.email}</td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td style={{ padding: '7px 10px', fontWeight: 600, color: '#0f172a' }}>{inv.email}</td>
+                      <td style={{ padding: '7px 10px' }}>
                         <span style={{
-                          padding: '3px 8px',
+                          padding: '2px 7px',
                           borderRadius: '4px',
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: 700,
                           backgroundColor: roleCode === 'GLOBAL_ADMIN' ? '#fee2e2' : roleCode === 'ADMIN' ? '#eff6ff' : '#f1f5f9',
                           color: roleCode === 'GLOBAL_ADMIN' ? '#b91c1c' : roleCode === 'ADMIN' ? '#1d4ed8' : '#475569',
@@ -3354,12 +3352,12 @@ function UserManagementView({ branchesList, showToast, setConfirmDialog }) {
                           {roleCode === 'GLOBAL_ADMIN' ? 'Company Admin' : roleCode === 'ADMIN' ? 'Branch Admin' : 'Staff / Uploader'}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 16px', color: '#475569' }}>
+                      <td style={{ padding: '7px 10px', color: '#475569' }}>
                         {inv.branch_name
                           ? (inv.branch_code ? `${inv.branch_name} (${inv.branch_code})` : inv.branch_name)
                           : (inv.branch_id ? `Branch #${inv.branch_id}` : 'Unassigned')}
                       </td>
-                      <td style={{ padding: '14px 16px', color: '#64748b' }}>
+                      <td style={{ padding: '7px 10px', color: '#64748b' }}>
                         {inv.expires_at ? new Date(inv.expires_at).toLocaleString() : '—'}
                       </td>
                       <td style={{ padding: '14px 16px' }}>
@@ -3740,11 +3738,11 @@ function DocumentArchiveView({ branchesList, showToast }) {
 
   return (
     <div>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+      <div style={{ marginBottom: '14px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
           Company Document Archive
         </h2>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
           Company-wide repository archive across all branches with OCR metadata and indexing.
         </p>
       </div>
@@ -3752,28 +3750,27 @@ function DocumentArchiveView({ branchesList, showToast }) {
       {/* Filter and Search Bar */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '12px',
+        borderRadius: '8px',
         border: '1px solid #e2e8f0',
-        padding: '14px 18px',
-        marginBottom: '20px',
+        padding: '8px 12px',
+        marginBottom: '12px',
         display: 'flex',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        gap: '8px',
       }}>
         <input
           type="text"
           placeholder="Search documents by filename or OCR extracted text..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: '260px', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+          style={{ flex: 1, minWidth: '240px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', height: '34px' }}
         />
 
         <select
           value={branchFilter}
           onChange={(e) => setBranchFilter(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', backgroundColor: '#ffffff', height: '34px' }}
         >
           <option value="">All Branches</option>
           {branchesList.map((b) => (
@@ -3783,84 +3780,172 @@ function DocumentArchiveView({ branchesList, showToast }) {
       </div>
 
       {/* Documents Table */}
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+        <div style={{ padding: '8px 14px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
+            Archived Documents
+          </span>
+          <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', backgroundColor: '#f1f5f9', color: '#64748b' }}>
+            {documents.length} records
+          </span>
+        </div>
+
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#64748b' }}>
-            <div className="spinner" style={{ margin: '0 auto 12px' }} />
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+            <div className="spinner" style={{ margin: '0 auto 10px' }} />
             Loading archive...
           </div>
         ) : documents.length === 0 ? (
-          <div style={{ padding: '48px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+          <div style={{ padding: '36px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
             No documents found in company archive.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                <th style={{ padding: '12px 16px' }}>Document Name</th>
-                <th style={{ padding: '12px 16px' }}>Branch</th>
-                <th style={{ padding: '12px 16px' }}>Type</th>
-                <th style={{ padding: '12px 16px' }}>OCR Status</th>
-                <th style={{ padding: '12px 16px' }}>File Size</th>
-                <th style={{ padding: '12px 16px' }}>Upload Date</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {documents.map((doc) => (
-                <tr key={doc.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{doc.original_filename}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>ID: #{doc.id}</div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 7px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
-                      {doc.branch_name || `Branch #${doc.branch_id}`}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', color: '#64748b' }}>
-                    {doc.document_type || 'General'}
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{
-                      padding: '2px 7px',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      backgroundColor: doc.ocr_status === 'COMPLETED' ? '#ecfdf5' : doc.ocr_status === 'FAILED' ? '#fef2f2' : '#f0f9ff',
-                      color: doc.ocr_status === 'COMPLETED' ? '#047857' : doc.ocr_status === 'FAILED' ? '#b91c1c' : '#0369a1',
-                    }}>
-                      {doc.ocr_status}
-                    </span>
-                  </td>
-                  <td style={{ padding: '14px 16px', color: '#64748b' }}>
-                    {doc.file_size_bytes ? `${(doc.file_size_bytes / 1024).toFixed(1)} KB` : '—'}
-                  </td>
-                  <td style={{ padding: '14px 16px', color: '#64748b' }}>
-                    {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '—'}
-                  </td>
-                  <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                    <Link
-                      to={`/documents/${doc.id}`}
-                      style={{
-                        padding: '5px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        backgroundColor: '#ffffff',
-                        color: '#ef233c',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        display: 'inline-block',
-                      }}
-                    >
-                      View
-                    </Link>
-                  </td>
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="doc-table" style={{ width: '100%', tableLayout: 'fixed', minWidth: 840, borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                  <th style={{ width: 48, padding: '8px 10px' }}>Preview</th>
+                  <th style={{ padding: '8px 10px' }}>Document Details</th>
+                  <th style={{ width: 140, padding: '8px 10px' }}>Branch</th>
+                  <th style={{ width: 100, padding: '8px 10px' }}>Type</th>
+                  <th style={{ width: 105, padding: '8px 10px' }}>OCR Status</th>
+                  <th style={{ width: 80, padding: '8px 10px' }}>File Size</th>
+                  <th style={{ width: 110, whiteSpace: 'nowrap', padding: '8px 10px' }}>Upload Date</th>
+                  <th style={{ width: 55, textAlign: 'center', padding: '8px 10px' }}>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {documents.map((doc) => {
+                  const isPdf = doc.mime_type === 'application/pdf' || (doc.original_filename && doc.original_filename.toLowerCase().endsWith('.pdf'));
+                  return (
+                    <tr
+                      key={doc.id}
+                      className="doc-row"
+                      style={{ borderBottom: '1px solid #f1f5f9' }}
+                    >
+                      {/* Thumbnail Preview */}
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', width: 48 }}>
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 4,
+                            overflow: 'hidden',
+                            backgroundColor: '#f1f5f9',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid #e2e8f0',
+                            flexShrink: 0,
+                          }}
+                        >
+                          <img
+                            src={api.getThumbnailUrl(doc.id)}
+                            alt={doc.original_filename}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) {
+                                e.target.nextSibling.style.display = 'flex';
+                              }
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: 'none',
+                              width: '100%',
+                              height: '100%',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isPdf ? '#dc2626' : '#2563eb',
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                            </svg>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Document Details */}
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px' }}>
+                        <div>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: '#0f172a',
+                              fontSize: '12.5px',
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={doc.original_filename}
+                          >
+                            {doc.original_filename}
+                          </span>
+                          <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>ID: #{doc.id}</span>
+                        </div>
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                          {doc.branch_name || `Branch #${doc.branch_id}`}
+                        </span>
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#64748b' }}>
+                        {doc.document_type || 'General'}
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px' }}>
+                        <span style={{
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          backgroundColor: doc.ocr_status === 'COMPLETED' ? '#ecfdf5' : doc.ocr_status === 'FAILED' ? '#fef2f2' : '#f0f9ff',
+                          color: doc.ocr_status === 'COMPLETED' ? '#047857' : doc.ocr_status === 'FAILED' ? '#b91c1c' : '#0369a1',
+                        }}>
+                          {doc.ocr_status}
+                        </span>
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {doc.file_size_bytes ? `${(doc.file_size_bytes / 1024).toFixed(1)} KB` : '—'}
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#475569', whiteSpace: 'nowrap' }}>
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', textAlign: 'center' }}>
+                        <Link
+                          to={`/documents/${doc.id}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            backgroundColor: '#f1f5f9',
+                            color: '#64748b',
+                            textDecoration: 'none',
+                          }}
+                          title="View document"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                          </svg>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
@@ -3937,30 +4022,30 @@ function CompanySecurityView({ showToast }) {
   }
 
   return (
-    <div style={{ maxWidth: '960px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
           Security &amp; Authentication Policies
         </h2>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
           Configure enterprise two-factor authentication rules and manage personal credentials.
         </p>
       </div>
 
       {/* Enterprise-Wide MFA Policy Card */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
               Enforce Multi-Factor Authentication (MFA) for All Company Users
             </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: '1.4' }}>
               When enabled, all Branch Administrators, Staff members, and Uploaders in your enterprise will be required to enroll and verify an authenticator app (Microsoft Authenticator, Google Authenticator) upon login.
             </p>
 
             {policy?.platform_mfa_enforced && (
-              <div style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#eff6ff', color: '#1e40af', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600 }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+              <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#eff6ff', color: '#1e40af', padding: '4px 10px', borderRadius: '5px', fontSize: '11.5px', fontWeight: 600 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
                 Locked by Platform Policy: Master Admin has mandated MFA platform-wide across all tenants.
               </div>
             )}
@@ -3970,12 +4055,12 @@ function CompanySecurityView({ showToast }) {
             onClick={handleTogglePolicy}
             disabled={updatingPolicy || policy?.platform_mfa_enforced}
             style={{
-              padding: '9px 18px',
-              borderRadius: '8px',
+              padding: '6px 14px',
+              borderRadius: '6px',
               border: 'none',
               backgroundColor: policy?.mfa_required_for_all ? '#10b981' : '#cbd5e1',
               color: '#ffffff',
-              fontSize: '13px',
+              fontSize: '11.5px',
               fontWeight: 700,
               cursor: (updatingPolicy || policy?.platform_mfa_enforced) ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap',
@@ -3988,13 +4073,13 @@ function CompanySecurityView({ showToast }) {
       </div>
 
       {/* Branch MFA Delegation Policy Card */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>
+            <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
               Branch MFA Policy Delegation
             </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: '1.5' }}>
+            <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: '1.4' }}>
               Allow assigned Branch Administrators to mandate and configure MFA policies independently for their branches.
             </p>
           </div>
@@ -4003,12 +4088,12 @@ function CompanySecurityView({ showToast }) {
             onClick={handleToggleDelegation}
             disabled={updatingPolicy}
             style={{
-              padding: '9px 18px',
-              borderRadius: '8px',
+              padding: '6px 14px',
+              borderRadius: '6px',
               border: 'none',
               backgroundColor: policy?.allow_branch_mfa_control ? '#2563eb' : '#cbd5e1',
               color: '#ffffff',
-              fontSize: '13px',
+              fontSize: '11.5px',
               fontWeight: 700,
               cursor: updatingPolicy ? 'not-allowed' : 'pointer',
               whiteSpace: 'nowrap',
@@ -4021,11 +4106,11 @@ function CompanySecurityView({ showToast }) {
       </div>
 
       {/* Personal MFA Setup for this Company Admin */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px', color: '#0f172a' }}>
+      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
           Personal Administrator Authenticator (TOTP)
         </h3>
-        <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>
+        <p style={{ margin: '0 0 12px', fontSize: '12.5px', color: '#64748b' }}>
           Protect your Company Administrator credentials with a time-based one-time password authenticator.
         </p>
 
@@ -4033,20 +4118,20 @@ function CompanySecurityView({ showToast }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '14px 18px',
-          borderRadius: '8px',
+          padding: '10px 14px',
+          borderRadius: '6px',
           backgroundColor: '#f8fafc',
           border: '1px solid #e2e8f0',
         }}>
           <div>
-            <div style={{ fontWeight: 600, fontSize: '14px', color: '#1e293b' }}>
+            <div style={{ fontWeight: 600, fontSize: '12.5px', color: '#1e293b' }}>
               Status: {mfaStatus?.mfa_enabled ? (
                 <span style={{ color: '#15803d' }}>Enabled &amp; Verified</span>
               ) : (
                 <span style={{ color: '#64748b' }}>Not Configured</span>
               )}
             </div>
-            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
               {mfaStatus?.mfa_enabled
                 ? 'Your administrator login is protected with 2FA.'
                 : 'Add extra protection against credential compromise.'}
@@ -4057,21 +4142,21 @@ function CompanySecurityView({ showToast }) {
             <button
               onClick={() => setShowEnrollModal(true)}
               style={{
-                padding: '9px 18px',
-                borderRadius: '8px',
+                padding: '6px 14px',
+                borderRadius: '6px',
                 border: 'none',
                 backgroundColor: '#ef233c',
                 color: '#ffffff',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(239, 35, 60, 0.25)',
+                boxShadow: '0 1px 3px rgba(239, 35, 60, 0.25)',
               }}
             >
               Set Up Authenticator App
             </button>
           ) : (
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#047857', backgroundColor: '#ecfdf5', padding: '4px 10px', borderRadius: '12px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 8px', borderRadius: '10px' }}>
               ACTIVE
             </span>
           )}
@@ -4137,12 +4222,12 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
   }, [actionFilter, branchFilter, actorTypeFilter, objectTypeFilter, page]);
 
   return (
-    <div>
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px 0', color: '#0f172a' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
           Company Audit Logs
         </h2>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+        <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
           Immutable, tamper-resistant trail of all security, operational, and administrative actions within your enterprise.
         </p>
       </div>
@@ -4150,20 +4235,19 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
       {/* Filter Bar */}
       <div style={{
         backgroundColor: '#ffffff',
-        borderRadius: '12px',
+        borderRadius: '8px',
         border: '1px solid #e2e8f0',
-        padding: '14px 18px',
-        marginBottom: '20px',
+        padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         flexWrap: 'wrap',
-        gap: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        gap: '10px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
       }}>
         <select
           value={actionFilter}
           onChange={(e) => { setActionFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          style={{ padding: '6px 10px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '12px', backgroundColor: '#ffffff' }}
         >
           <option value="">All Actions</option>
           <option value="USER_LOGIN">User Login</option>
@@ -4182,7 +4266,7 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
         <select
           value={branchFilter}
           onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          style={{ padding: '6px 10px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '12px', backgroundColor: '#ffffff' }}
         >
           <option value="">All Branches</option>
           {branchesList.map((b) => (
@@ -4193,7 +4277,7 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
         <select
           value={actorTypeFilter}
           onChange={(e) => { setActorTypeFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          style={{ padding: '6px 10px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '12px', backgroundColor: '#ffffff' }}
         >
           <option value="">All Actor Types</option>
           <option value="user">User</option>
@@ -4204,7 +4288,7 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
         <select
           value={objectTypeFilter}
           onChange={(e) => { setObjectTypeFilter(e.target.value); setPage(1); }}
-          style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#ffffff' }}
+          style={{ padding: '6px 10px', borderRadius: '5px', border: '1px solid #cbd5e1', fontSize: '12px', backgroundColor: '#ffffff' }}
         >
           <option value="">All Object Types</option>
           <option value="user">User</option>
@@ -4216,63 +4300,63 @@ function CompanyAuditLogsView({ branchesList, showToast }) {
       </div>
 
       {/* Logs Table */}
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
         {loading ? (
-          <div style={{ padding: '60px 0', textAlign: 'center', color: '#64748b' }}>
-            <div className="spinner" style={{ margin: '0 auto 12px' }} />
+          <div style={{ padding: '50px 0', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+            <div className="spinner" style={{ margin: '0 auto 10px' }} />
             Loading audit records...
           </div>
         ) : logs.length === 0 ? (
-          <div style={{ padding: '48px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+          <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
             No audit events found matching filters.
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                <th style={{ padding: '12px 16px' }}>Timestamp</th>
-                <th style={{ padding: '12px 16px' }}>Action</th>
-                <th style={{ padding: '12px 16px' }}>Actor</th>
-                <th style={{ padding: '12px 16px' }}>Target Object</th>
-                <th style={{ padding: '12px 16px' }}>Branch</th>
-                <th style={{ padding: '12px 16px' }}>IP Address</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Details</th>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <th style={{ padding: '8px 12px' }}>Timestamp</th>
+                <th style={{ padding: '8px 12px' }}>Action</th>
+                <th style={{ padding: '8px 12px' }}>Actor</th>
+                <th style={{ padding: '8px 12px' }}>Target Object</th>
+                <th style={{ padding: '8px 12px' }}>Branch</th>
+                <th style={{ padding: '8px 12px' }}>IP Address</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right' }}>Details</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '8px 12px', color: '#64748b', whiteSpace: 'nowrap' }}>
                     {log.occurred_at ? new Date(log.occurred_at).toLocaleString() : '—'}
                   </td>
-                  <td style={{ padding: '12px 16px' }}>
+                  <td style={{ padding: '8px 12px' }}>
                     <span style={{
-                      padding: '2px 7px',
+                      padding: '2px 6px',
                       borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: 700,
+                      fontSize: '10.5px',
+                      fontWeight: 600,
                       backgroundColor: '#f1f5f9',
                       color: '#1e293b',
                     }}>
                       {log.action}
                     </span>
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#0f172a' }}>
+                  <td style={{ padding: '8px 12px', color: '#0f172a' }}>
                     {log.actor_type} #{log.actor_id}
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#475569' }}>
+                  <td style={{ padding: '8px 12px', color: '#475569' }}>
                     {log.object_type || '—'} {log.object_id ? `(${log.object_id})` : ''}
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>
+                  <td style={{ padding: '8px 12px', color: '#64748b' }}>
                     {log.branch_id ? `Branch #${log.branch_id}` : 'Company HQ'}
                   </td>
-                  <td style={{ padding: '12px 16px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                  <td style={{ padding: '8px 12px', color: '#94a3b8', fontFamily: 'monospace' }}>
                     {log.ip || '—'}
                   </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                  <td style={{ padding: '8px 12px', textAlign: 'right' }}>
                     <button
                       onClick={() => setSelectedLog(log)}
-                      style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                      style={{ padding: '3px 8px', borderRadius: '5px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
                     >
                       Inspect
                     </button>

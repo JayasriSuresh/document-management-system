@@ -645,7 +645,7 @@ export default function DocumentViewPage() {
     : `Document #${doc.id}`;
 
   return (
-    <div className="page-content" style={{ maxWidth: '1720px', margin: '0 auto', padding: '0.875rem 1.25rem 2.5rem' }}>
+    <div className="page-content" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
       {/* Toast Notification */}
       {toast && (
         <div

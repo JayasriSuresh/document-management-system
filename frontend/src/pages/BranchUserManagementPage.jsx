@@ -308,7 +308,7 @@ export default function BranchUserManagementPage() {
   };
 
   return (
-    <div className="branch-user-management" style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px' }}>
+    <div className="branch-user-management" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
       {/* ── Toast Feedback ─────────────────────────────────────────────── */}
       {feedback.message && (
         <div style={{
@@ -338,16 +338,16 @@ export default function BranchUserManagementPage() {
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        gap: '16px',
-        marginBottom: '24px',
+        gap: '12px',
+        marginBottom: '16px',
         borderBottom: '1px solid #e2e8f0',
-        paddingBottom: '20px',
+        paddingBottom: '14px',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: '0 0 3px 0', fontSize: '20px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
             User Management
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
             Manage staff and uploaders in your authorized branches.
           </p>
         </div>
@@ -357,13 +357,13 @@ export default function BranchUserManagementPage() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '6px',
             backgroundColor: '#2563eb',
             color: '#ffffff',
-            padding: '10px 18px',
-            borderRadius: '8px',
+            padding: '6px 14px',
+            borderRadius: '6px',
             border: 'none',
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
@@ -372,7 +372,7 @@ export default function BranchUserManagementPage() {
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
         >
-          <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+          <span style={{ fontSize: '15px', lineHeight: 1 }}>+</span>
           Invite User
         </button>
       </div>
@@ -428,10 +428,11 @@ export default function BranchUserManagementPage() {
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             style={{
               width: '100%',
-              padding: '9px 12px',
-              borderRadius: '8px',
+              padding: '5px 10px',
+              borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              fontSize: '13px',
+              fontSize: '12px',
+              height: '34px',
               outline: 'none',
               backgroundColor: '#ffffff',
             }}
@@ -444,10 +445,11 @@ export default function BranchUserManagementPage() {
             value={branchFilter}
             onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
             style={{
-              padding: '9px 12px',
-              borderRadius: '8px',
+              padding: '5px 10px',
+              borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              fontSize: '13px',
+              fontSize: '12px',
+              height: '34px',
               backgroundColor: '#ffffff',
               cursor: 'pointer',
             }}
@@ -467,10 +469,11 @@ export default function BranchUserManagementPage() {
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
             style={{
-              padding: '9px 12px',
-              borderRadius: '8px',
+              padding: '5px 10px',
+              borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              fontSize: '13px',
+              fontSize: '12px',
+              height: '34px',
               backgroundColor: '#ffffff',
               cursor: 'pointer',
             }}
@@ -487,10 +490,11 @@ export default function BranchUserManagementPage() {
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             style={{
-              padding: '9px 12px',
-              borderRadius: '8px',
+              padding: '5px 10px',
+              borderRadius: '6px',
               border: '1px solid #cbd5e1',
-              fontSize: '13px',
+              fontSize: '12px',
+              height: '34px',
               backgroundColor: '#ffffff',
               cursor: 'pointer',
             }}
@@ -506,37 +510,37 @@ export default function BranchUserManagementPage() {
       {activeTab === 'users' && (
         <div style={{
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
+          borderRadius: '8px',
           border: '1px solid #e2e8f0',
           overflow: 'hidden',
           boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
         }}>
           {userError && (
-            <div style={{ padding: '16px 20px', backgroundColor: '#fef2f2', color: '#b91c1c', fontSize: '13px', borderBottom: '1px solid #fecaca' }}>
+            <div style={{ padding: '12px 16px', backgroundColor: '#fef2f2', color: '#b91c1c', fontSize: '12px', borderBottom: '1px solid #fecaca' }}>
               {userError}
             </div>
           )}
 
           {loadingUsers ? (
-            <div style={{ padding: '64px 0', textAlign: 'center', color: '#64748b' }}>
-              <div className="spinner" style={{ margin: '0 auto 12px' }} />
+            <div style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+              <div className="spinner" style={{ margin: '0 auto 10px' }} />
               Loading branch personnel...
             </div>
           ) : users.length === 0 ? (
-            <div style={{ padding: '64px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+            <div style={{ padding: '48px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
               No personnel found matching your filter criteria.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: '14px 18px' }}>Employee Details</th>
-                    <th style={{ padding: '14px 18px' }}>Role</th>
-                    <th style={{ padding: '14px 18px' }}>Branch</th>
-                    <th style={{ padding: '14px 18px' }}>MFA Security</th>
-                    <th style={{ padding: '14px 18px' }}>Status</th>
-                    <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    <th style={{ padding: '8px 10px' }}>Employee Details</th>
+                    <th style={{ padding: '8px 10px' }}>Role</th>
+                    <th style={{ padding: '8px 10px' }}>Branch</th>
+                    <th style={{ padding: '8px 10px' }}>MFA Security</th>
+                    <th style={{ padding: '8px 10px' }}>Status</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -545,18 +549,18 @@ export default function BranchUserManagementPage() {
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         {/* Employee Details */}
-                        <td style={{ padding: '14px 18px' }}>
+                        <td style={{ padding: '7px 10px' }}>
                           <div style={{ fontWeight: 600, color: '#0f172a' }}>{u.name}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>{u.email}</div>
-                          {u.mobile && <div style={{ fontSize: '11px', color: '#94a3b8' }}>{u.mobile}</div>}
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{u.email}</div>
+                          {u.mobile && <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>{u.mobile}</div>}
                         </td>
 
                         {/* Role */}
-                        <td style={{ padding: '14px 18px' }}>
+                        <td style={{ padding: '7px 10px' }}>
                           <span style={{
-                            padding: '3px 8px',
+                            padding: '2px 7px',
                             borderRadius: '4px',
-                            fontSize: '11px',
+                            fontSize: '10.5px',
                             fontWeight: 700,
                             backgroundColor: u.role === 'ADMIN' ? '#eff6ff' : u.role === 'UPLOADER' ? '#fdf4ff' : '#f1f5f9',
                             color: u.role === 'ADMIN' ? '#1d4ed8' : u.role === 'UPLOADER' ? '#a21caf' : '#334155',
@@ -567,14 +571,14 @@ export default function BranchUserManagementPage() {
                         </td>
 
                         {/* Branch */}
-                        <td style={{ padding: '14px 18px' }}>
-                          <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600 }}>
+                        <td style={{ padding: '7px 10px' }}>
+                          <span style={{ backgroundColor: '#f1f5f9', color: '#334155', padding: '1px 6px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 }}>
                             {u.branch_name || `Branch #${u.branch_id}`}
                           </span>
                         </td>
 
                         {/* MFA Security */}
-                        <td style={{ padding: '14px 18px' }}>
+                        <td style={{ padding: '7px 10px' }}>
                           <span style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -589,11 +593,11 @@ export default function BranchUserManagementPage() {
                         </td>
 
                         {/* Status */}
-                        <td style={{ padding: '14px 18px' }}>
+                        <td style={{ padding: '7px 10px' }}>
                           <span style={{
-                            padding: '2px 8px',
+                            padding: '1px 6px',
                             borderRadius: '10px',
-                            fontSize: '11px',
+                            fontSize: '10.5px',
                             fontWeight: 700,
                             backgroundColor: u.status === 'active' ? '#ecfdf5' : '#fef2f2',
                             color: u.status === 'active' ? '#047857' : '#b91c1c',
@@ -603,7 +607,7 @@ export default function BranchUserManagementPage() {
                         </td>
 
                         {/* Actions */}
-                        <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                        <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                           {isAdmin ? (
                             <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
                               Admin Account
@@ -613,12 +617,12 @@ export default function BranchUserManagementPage() {
                               <button
                                 onClick={() => handleOpenEditModal(u)}
                                 style={{
-                                  padding: '5px 10px',
-                                  borderRadius: '6px',
+                                  padding: '3px 8px',
+                                  borderRadius: '4px',
                                   border: '1px solid #cbd5e1',
                                   backgroundColor: '#ffffff',
                                   color: '#334155',
-                                  fontSize: '12px',
+                                  fontSize: '11px',
                                   fontWeight: 500,
                                   cursor: 'pointer',
                                 }}
@@ -740,33 +744,33 @@ export default function BranchUserManagementPage() {
               Loading invitations...
             </div>
           ) : invitations.length === 0 ? (
-            <div style={{ padding: '64px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+            <div style={{ padding: '48px 0', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
               No branch invitations found.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <div style={{ overflowX: 'auto', width: '100%' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: '14px 18px' }}>Invited Email</th>
-                    <th style={{ padding: '14px 18px' }}>Role</th>
-                    <th style={{ padding: '14px 18px' }}>Branch</th>
-                    <th style={{ padding: '14px 18px' }}>Expires At</th>
-                    <th style={{ padding: '14px 18px' }}>Status</th>
-                    <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    <th style={{ padding: '8px 10px' }}>Invited Email</th>
+                    <th style={{ padding: '8px 10px' }}>Role</th>
+                    <th style={{ padding: '8px 10px' }}>Branch</th>
+                    <th style={{ padding: '8px 10px' }}>Expires At</th>
+                    <th style={{ padding: '8px 10px' }}>Status</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {invitations.map((inv) => (
                     <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 18px', fontWeight: 600, color: '#0f172a' }}>
+                      <td style={{ padding: '7px 10px', fontWeight: 600, color: '#0f172a' }}>
                         {inv.email}
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         <span style={{
-                          padding: '3px 8px',
+                          padding: '2px 7px',
                           borderRadius: '4px',
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: 700,
                           backgroundColor: inv.invited_role === 'UPLOADER' ? '#fdf4ff' : '#f1f5f9',
                           color: inv.invited_role === 'UPLOADER' ? '#a21caf' : '#334155',
@@ -775,17 +779,17 @@ export default function BranchUserManagementPage() {
                           {inv.invited_role}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         {inv.branch_name || `Branch #${inv.branch_id}`}
                       </td>
-                      <td style={{ padding: '14px 18px', color: '#64748b', fontSize: '12px' }}>
+                      <td style={{ padding: '7px 10px', color: '#64748b', fontSize: '11.5px' }}>
                         {new Date(inv.expires_at).toLocaleString()}
                       </td>
-                      <td style={{ padding: '14px 18px' }}>
+                      <td style={{ padding: '7px 10px' }}>
                         <span style={{
-                          padding: '2px 8px',
+                          padding: '1px 6px',
                           borderRadius: '10px',
-                          fontSize: '11px',
+                          fontSize: '10.5px',
                           fontWeight: 700,
                           backgroundColor: inv.status === 'accepted' ? '#ecfdf5' : inv.status === 'pending' ? '#eff6ff' : '#fef2f2',
                           color: inv.status === 'accepted' ? '#047857' : inv.status === 'pending' ? '#1d4ed8' : '#b91c1c',
@@ -793,7 +797,7 @@ export default function BranchUserManagementPage() {
                           {(inv.status || 'pending').toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                      <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                         {inv.status === 'pending' && (
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button

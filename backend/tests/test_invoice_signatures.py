@@ -101,9 +101,10 @@ def sig_test_env(client):
             db.add(billing_addr)
 
         db.commit()
+        creator = db.query(User).filter(User.email == "samrethi@example.com").first()
         return {
             "company_id": 40,
-            "branch_id": branch.id,
+            "branch_id": creator.branch_id if creator else branch.id,
             "gst_reg_id": gst_reg.id,
             "customer_id": customer.id,
             "creator_email": "samrethi@example.com",

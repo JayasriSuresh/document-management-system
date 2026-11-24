@@ -1268,10 +1268,17 @@ export const api = {
     });
   },
 
-  // ── Module 10: Multi-Provider AI Architecture ─────────────────────────────
-  // Platform AI (Master Admin)
+  // ── Module 10: Multi-Provider AI Architecture (Master Admin Control) ───────
+  // Platform AI Providers & Credentials (Master Admin)
   getPlatformAIProviders: async () => {
     return wrappedFetch(`${API_BASE}/api/admin/ai/providers`, { headers: getHeaders() });
+  },
+  createPlatformAIProvider: async (payload) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/providers`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
   },
   updatePlatformAIProvider: async (providerKey, updates) => {
     return wrappedFetch(`${API_BASE}/api/admin/ai/providers/${providerKey}`, {
@@ -1304,7 +1311,101 @@ export const api = {
     });
   },
 
-  // Company AI (Company Admin)
+  // Platform AI Model Catalogue (Master Admin)
+  getAICatalogueModels: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return wrappedFetch(`${API_BASE}/api/admin/ai/models${query ? `?${query}` : ''}`, { headers: getHeaders() });
+  },
+  createAICatalogueModel: async (payload) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/models`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+  updateAICatalogueModel: async (modelId, payload) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/models/${modelId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteAICatalogueModel: async (modelId) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/models/${modelId}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+  },
+
+  // Platform Company AI Model Assignments (Master Admin)
+  getCompanyAssignmentsSummary: async () => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/company-assignments`, { headers: getHeaders() });
+  },
+  getCompanyAssignmentsDetail: async (companyId) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/companies/${companyId}/assignments`, { headers: getHeaders() });
+  },
+  updateCompanyAssignments: async (companyId, payload) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/companies/${companyId}/assignments`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteCompanyTaskAssignment: async (companyId, taskType) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/companies/${companyId}/assignments/${taskType}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+  },
+
+  // Platform Company AI Requests Management (Master Admin)
+  getPlatformAIRequests: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return wrappedFetch(`${API_BASE}/api/admin/ai/requests${query ? `?${query}` : ''}`, { headers: getHeaders() });
+  },
+  approveCompanyAIRequest: async (requestId, payload = {}) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/requests/${requestId}/approve`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+  rejectCompanyAIRequest: async (requestId, payload) => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/requests/${requestId}/reject`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Platform AI Usage Overview (Master Admin)
+  getPlatformAIUsageOverview: async () => {
+    return wrappedFetch(`${API_BASE}/api/admin/ai/usage-overview`, { headers: getHeaders() });
+  },
+
+  // Company AI Information & Requests (Company Admin)
+  getCompanyAIInfo: async () => {
+    return wrappedFetch(`${API_BASE}/api/company/ai/info`, { headers: getHeaders() });
+  },
+  getCompanyAIRequests: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return wrappedFetch(`${API_BASE}/api/company/ai/requests${query ? `?${query}` : ''}`, { headers: getHeaders() });
+  },
+  submitCompanyAIRequest: async (payload) => {
+    return wrappedFetch(`${API_BASE}/api/company/ai/requests`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload),
+    });
+  },
+  cancelCompanyAIRequest: async (requestId) => {
+    return wrappedFetch(`${API_BASE}/api/company/ai/requests/${requestId}/cancel`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+  },
+
+  // Company AI Settings & Consents
   getCompanyAISettings: async () => {
     return wrappedFetch(`${API_BASE}/api/company/ai/settings`, { headers: getHeaders() });
   },

@@ -29,6 +29,9 @@ class ObjectType(str, Enum):
     SECURITY_POLICY = "security_policy"
     CUSTOMER = "customer"
     GST_REGISTRATION = "gst_registration"
+    AI_MODEL = "ai_model"
+    AI_ASSIGNMENT = "ai_assignment"
+    AI_REQUEST = "ai_request"
 
 
 # ── Audit Event Types ──────────────────────────────────────────────────────────
@@ -95,6 +98,11 @@ AI_CONSENT_GRANT = "ai.consent.grant"
 AI_CONSENT_REVOKE = "ai.consent.revoke"
 AI_CONNECTION_TEST = "ai.connection.test"
 AI_BUDGET_EXHAUSTED = "ai.budget.exhausted"
+AI_MODEL_CATALOGUE_UPDATE = "ai.model_catalogue.update"
+AI_MODEL_ASSIGNMENT_UPDATE = "ai.model_assignment.update"
+AI_MODEL_REQUEST_CREATE = "ai.model_request.create"
+AI_MODEL_REQUEST_APPROVE = "ai.model_request.approve"
+AI_MODEL_REQUEST_REJECT = "ai.model_request.reject"
 
 # F. Invoice Templates & Document Templates (Module 11)
 TEMPLATE_CREATE = "template.create"

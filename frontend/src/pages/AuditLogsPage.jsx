@@ -107,14 +107,14 @@ export default function AuditLogsPage() {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 16px' }}>
+    <div className="page-content" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: '0 0 6px 0' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', margin: '0 0 3px 0', letterSpacing: '-0.01em' }}>
             Audit Logs
           </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
             Immutable, tamper-resistant trail of security transactions, document operations, and system events.
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function AuditLogsPage() {
           onClick={fetchLogs}
           disabled={loading}
           className="btn btn-secondary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '6px 12px', borderRadius: '6px' }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="23 4 23 10 17 10" />
@@ -133,11 +133,11 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px 20px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-        <form onSubmit={handleFilterSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'flex-end' }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', marginBottom: '14px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <form onSubmit={handleFilterSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
           {/* Action Filter */}
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
+          <div style={{ flex: '1 1 180px' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>
               Action
             </label>
             <input
@@ -146,21 +146,21 @@ export default function AuditLogsPage() {
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
               className="input-field"
-              style={{ width: '100%', fontSize: '13px', padding: '8px 12px' }}
+              style={{ width: '100%', fontSize: '12px', height: '34px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
             />
           </div>
 
           {/* Branch filter (if multi-branch allowed) */}
           {branches.length > 0 && (
-            <div style={{ flex: '1 1 180px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
+            <div style={{ flex: '1 1 160px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>
                 Branch
               </label>
               <select
                 value={branchFilter}
                 onChange={(e) => setBranchFilter(e.target.value)}
                 className="input-field"
-                style={{ width: '100%', fontSize: '13px', padding: '8px 12px' }}
+                style={{ width: '100%', fontSize: '12px', height: '34px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff' }}
               >
                 <option value="">All Branches</option>
                 {branches.map((b) => (
@@ -173,8 +173,8 @@ export default function AuditLogsPage() {
           )}
 
           {/* Date range from */}
-          <div style={{ flex: '1 1 160px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>
               From Date
             </label>
             <input
@@ -182,13 +182,13 @@ export default function AuditLogsPage() {
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               className="input-field"
-              style={{ width: '100%', fontSize: '13px', padding: '8px 12px' }}
+              style={{ width: '100%', fontSize: '12px', height: '34px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
             />
           </div>
 
           {/* Date range to */}
-          <div style={{ flex: '1 1 160px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
+          <div style={{ flex: '1 1 140px' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>
               To Date
             </label>
             <input
@@ -196,20 +196,20 @@ export default function AuditLogsPage() {
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               className="input-field"
-              style={{ width: '100%', fontSize: '13px', padding: '8px 12px' }}
+              style={{ width: '100%', fontSize: '12px', height: '34px', padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
             />
           </div>
 
           {/* Buttons */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button type="submit" className="btn btn-primary" style={{ padding: '0 14px', height: '34px', fontSize: '12px', borderRadius: '6px' }}>
               Filter
             </button>
             <button
               type="button"
               onClick={handleResetFilters}
               className="btn btn-secondary"
-              style={{ padding: '8px 14px', fontSize: '13px' }}
+              style={{ padding: '0 12px', height: '34px', fontSize: '12px', borderRadius: '6px' }}
             >
               Reset
             </button>
@@ -225,30 +225,30 @@ export default function AuditLogsPage() {
       )}
 
       {/* Audit Log Table */}
-      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
-                <th style={{ padding: '12px 16px' }}>Timestamp (IST)</th>
-                <th style={{ padding: '12px 16px' }}>Action</th>
-                <th style={{ padding: '12px 16px' }}>Actor</th>
-                <th style={{ padding: '12px 16px' }}>Target Object</th>
-                <th style={{ padding: '12px 16px' }}>Branch</th>
-                <th style={{ padding: '12px 16px' }}>IP / Request ID</th>
-                <th style={{ padding: '12px 16px', textAlign: 'right' }}>Details</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <th style={{ padding: '8px 10px' }}>Timestamp (IST)</th>
+                <th style={{ padding: '8px 10px' }}>Action</th>
+                <th style={{ padding: '8px 10px' }}>Actor</th>
+                <th style={{ padding: '8px 10px' }}>Target Object</th>
+                <th style={{ padding: '8px 10px' }}>Branch</th>
+                <th style={{ padding: '8px 10px' }}>IP / Request ID</th>
+                <th style={{ padding: '8px 10px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading && logs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: '#64748b', fontSize: '13px' }}>
                     Loading audit trail...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: '#64748b', fontSize: '13px' }}>
                     No audit records found matching criteria.
                   </td>
                 </tr>
@@ -260,16 +260,16 @@ export default function AuditLogsPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#1e293b' }}>
+                    <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', color: '#1e293b' }}>
                       {formatTimestamp(log.occurred_at)}
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '7px 10px' }}>
                       <span
                         style={{
                           display: 'inline-block',
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          fontSize: '10.5px',
                           fontWeight: '600',
                           fontFamily: 'monospace',
                           background: log.action?.includes('delete') || log.action?.includes('fail')
@@ -287,12 +287,12 @@ export default function AuditLogsPage() {
                         {log.action}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '7px 10px' }}>
                       <div style={{ fontWeight: '500', color: '#0f172a' }}>
                         {log.actor_type === 'USER' ? `User #${log.actor_id}` : log.actor_type}
                       </div>
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                    <td style={{ padding: '7px 10px', color: '#475569' }}>
                       {log.object_type ? (
                         <span>
                           <strong style={{ color: '#334155' }}>{log.object_type}</strong>{' '}
@@ -302,10 +302,10 @@ export default function AuditLogsPage() {
                         '—'
                       )}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#475569' }}>
+                    <td style={{ padding: '7px 10px', color: '#475569' }}>
                       {log.branch_id ? `Branch #${log.branch_id}` : 'Company-wide'}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '7px 10px', color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>
                       <div>{log.ip || '—'}</div>
                       {log.request_id && (
                         <div style={{ color: '#94a3b8', fontSize: '10px' }} title={log.request_id}>
@@ -313,15 +313,15 @@ export default function AuditLogsPage() {
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                    <td style={{ padding: '7px 10px', textAlign: 'right' }}>
                       <button
                         onClick={() => setSelectedLog(log)}
                         style={{
                           background: '#f1f5f9',
                           border: '1px solid #cbd5e1',
-                          borderRadius: '6px',
-                          padding: '4px 10px',
-                          fontSize: '12px',
+                          borderRadius: '4px',
+                          padding: '3px 8px',
+                          fontSize: '11px',
                           cursor: 'pointer',
                           color: '#334155',
                           fontWeight: '500',

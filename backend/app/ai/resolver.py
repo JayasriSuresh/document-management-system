@@ -20,7 +20,8 @@ from sqlalchemy import text
 
 from app.models import (
     Company, Branch, PlatformAIProvider, CompanyAISetting,
-    CompanyAIConsent, BranchAIConfig, AICredential
+    CompanyAIConsent, BranchAIConfig, AICredential,
+    AIModelCatalogue, CompanyAIModelAssignment
 )
 from app.ai.base import AIProviderError
 from app.security.encryption import decrypt_api_key
@@ -136,6 +137,11 @@ def resolve_ai_config(
     if (company.status or "").lower() == "suspended":
         raise AIProviderError("COMPANY_SUSPENDED", "Cannot execute AI operations for a suspended company.", is_retryable=False)
 
+    # 1.1 Verify Company AI Access is enabled
+    comp_setting = db.query(CompanyAISetting).filter(CompanyAISetting.company_id == company_id).first()
+    if comp_setting and hasattr(comp_setting, "is_ai_enabled") and not comp_setting.is_ai_enabled:
+        raise AIProviderError("AI_ACCESS_DISABLED", f"AI operations are disabled for Company #{company_id} by platform administrator.", is_retryable=False)
+
     # 2. Verify Branch
     branch = db.query(Branch).filter(Branch.id == branch_id, Branch.company_id == company_id).first()
     if not branch:
@@ -145,49 +151,92 @@ def resolve_ai_config(
     if hasattr(branch, "is_active") and not branch.is_active:
         raise AIProviderError("BRANCH_INACTIVE", f"Branch #{branch_id} is deactivated.", is_retryable=False)
 
-    # 3. Load Branch Config (or fallback to Company Defaults)
-    branch_cfg = (
-        db.query(BranchAIConfig)
+    # 3. Resolve Master Admin Company Model Assignment
+    # Map operation string to task_type: 'ocr', 'extraction', 'generation'
+    task_keys = [operation]
+    if operation in ("read", "ocr"):
+        task_keys = ["ocr", "read"]
+    elif operation in ("extraction",):
+        task_keys = ["extraction", "ocr", "read"]
+    elif operation in ("generate", "generation", "invoice_generation"):
+        task_keys = ["generation", "generate"]
+
+    assignment = (
+        db.query(CompanyAIModelAssignment)
         .filter(
-            BranchAIConfig.company_id == company_id,
-            BranchAIConfig.branch_id == branch_id,
-            BranchAIConfig.operation == operation,
+            CompanyAIModelAssignment.company_id == company_id,
+            CompanyAIModelAssignment.task_type.in_(task_keys),
+            CompanyAIModelAssignment.is_enabled == True,
         )
+        .order_by(CompanyAIModelAssignment.id.desc())
         .first()
     )
 
-    comp_setting = db.query(CompanyAISetting).filter(CompanyAISetting.company_id == company_id).first()
     allowed_providers = comp_setting.allowed_providers if comp_setting and comp_setting.allowed_providers else ["gemini", "openai", "anthropic"]
 
-    if branch_cfg:
-        primary_provider = branch_cfg.primary_provider
-        primary_model = branch_cfg.primary_model
-        fallback_provider = branch_cfg.fallback_provider
-        fallback_model = branch_cfg.fallback_model
-        max_retries = branch_cfg.max_retries
-        timeout_seconds = branch_cfg.timeout_seconds
-    else:
-        # Company-level defaults
-        if operation == "generate" and comp_setting and comp_setting.default_generate_provider:
-            primary_provider = comp_setting.default_generate_provider
-            primary_model = comp_setting.default_generate_model or "gemini-2.0-flash"
-        elif comp_setting and comp_setting.default_read_provider:
-            primary_provider = comp_setting.default_read_provider
-            primary_model = comp_setting.default_read_model or "gemini-2.0-flash"
-        else:
-            primary_provider = "gemini"
-            primary_model = "gemini-2.0-flash"
+    if assignment:
+        primary_provider = assignment.provider_key
+        primary_model = assignment.model_id
         fallback_provider = None
         fallback_model = None
         max_retries = 2
         timeout_seconds = 30
+    else:
+        # Check branch config or company defaults (with fallback compatibility)
+        branch_cfg = (
+            db.query(BranchAIConfig)
+            .filter(
+                BranchAIConfig.company_id == company_id,
+                BranchAIConfig.branch_id == branch_id,
+                BranchAIConfig.operation == operation,
+            )
+            .first()
+        )
+        if branch_cfg:
+            primary_provider = branch_cfg.primary_provider
+            primary_model = branch_cfg.primary_model
+            fallback_provider = branch_cfg.fallback_provider
+            fallback_model = branch_cfg.fallback_model
+            max_retries = branch_cfg.max_retries
+            timeout_seconds = branch_cfg.timeout_seconds
+        elif comp_setting:
+            if operation in ("generate", "generation") and comp_setting.default_generate_provider:
+                primary_provider = comp_setting.default_generate_provider
+                primary_model = comp_setting.default_generate_model or "gemini-2.0-flash"
+            elif comp_setting.default_read_provider:
+                primary_provider = comp_setting.default_read_provider
+                primary_model = comp_setting.default_read_model or "gemini-2.0-flash"
+            else:
+                primary_provider = "gemini"
+                primary_model = "gemini-2.0-flash"
+            fallback_provider = None
+            fallback_model = None
+            max_retries = 2
+            timeout_seconds = 30
+        else:
+            raise AIProviderError(
+                "AI_CAPABILITY_NOT_ENABLED",
+                f"No approved AI model assignment configured for task '{operation}' for Company #{company_id}.",
+                is_retryable=False,
+            )
 
     # 4. Validate Primary Provider against Platform Availability
     plat_primary = db.query(PlatformAIProvider).filter(PlatformAIProvider.provider_key == primary_provider).first()
     if not plat_primary or not plat_primary.is_enabled:
         raise AIProviderError("AI_PROVIDER_DISABLED", f"AI provider '{primary_provider}' is disabled platform-wide.", is_retryable=False)
 
-    # 5. Validate Primary Model against Platform Allow-List
+    # 5. Validate Primary Model against Platform Catalogue and Allow-List
+    cat_model = (
+        db.query(AIModelCatalogue)
+        .filter(
+            AIModelCatalogue.provider_key == primary_provider,
+            AIModelCatalogue.model_id == primary_model,
+        )
+        .first()
+    )
+    if cat_model and not cat_model.is_active:
+        raise AIProviderError("AI_MODEL_DISABLED", f"Model '{primary_model}' is deactivated in the platform catalogue.", is_retryable=False)
+
     if plat_primary.model_allow_list and primary_model not in plat_primary.model_allow_list:
         raise AIProviderError("AI_MODEL_NOT_ALLOWED", f"Model '{primary_model}' is not permitted for provider '{primary_provider}'.", is_retryable=False)
 

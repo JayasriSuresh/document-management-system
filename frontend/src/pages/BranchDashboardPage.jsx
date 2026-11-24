@@ -76,7 +76,7 @@ export default function BranchDashboardPage() {
   }
 
   return (
-    <div className="branch-dashboard-page" style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px 48px' }}>
+    <div className="page-content" style={{ width: '100%', maxWidth: '100%', padding: '1.5rem 2rem' }}>
       {toastMessage && (
         <div style={{
           position: 'fixed',

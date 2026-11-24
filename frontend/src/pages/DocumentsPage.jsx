@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
@@ -174,9 +174,10 @@ const EMPTY_FILTERS = {
   status: '',
 };
 
-export default function DocumentsPage() {
+export default function DocumentsPage({ isArchiveView = false }) {
   const { user, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [docs, setDocs] = useState([]);
@@ -331,36 +332,44 @@ export default function DocumentsPage() {
   return (
     <div className="page-content">
       {/* Page Header */}
-      <div className="page-header">
+      <div className="page-header" style={{ marginBottom: 14 }}>
         <div>
-          <h2 className="page-title">
+          <h2 className="page-title" style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
             {viewTab === 'dashboard'
               ? 'Branch Operational Dashboard'
+              : (isArchiveView || location.pathname.startsWith('/company/documents'))
+              ? 'Company Document Archive'
               : (user?.role === 'GLOBAL_ADMIN' ? 'All Documents' : user?.role === 'ADMIN' ? `Documents — ${user?.tenant_name}` : 'My Documents')}
           </h2>
-          <p className="page-subtitle">
+          <p className="page-subtitle" style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
             {viewTab === 'dashboard'
               ? `Operational metrics, OCR throughput, and background jobs for ${user?.tenant_name}`
+              : (isArchiveView || location.pathname.startsWith('/company/documents'))
+              ? `Company-wide document archive and OCR intelligence across ${user?.tenant_name || 'all branches'}`
               : (user?.role === 'STAFF' ? 'Your documents from the last 30 days' : `Documents across ${user?.tenant_name}`)}
           </p>
         </div>
         {hasPermission('document.upload') && (
-          <button className="btn btn-primary" onClick={() => navigate('/upload')}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/upload')}
+            style={{ fontSize: '12.5px', padding: '6px 14px', borderRadius: '6px', fontWeight: 500 }}
+          >
             Upload Documents
           </button>
         )}
       </div>
 
       {/* Tabs: Active vs Trash vs Branch Dashboard */}
-      <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid #e2e8f0', marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 6, borderBottom: '1px solid #e2e8f0', marginBottom: 12 }}>
         <button
           onClick={() => handleTabChange('active')}
           style={{
-            padding: '8px 16px',
+            padding: '6px 14px',
             border: 'none',
             background: 'none',
             fontWeight: 600,
-            fontSize: 14,
+            fontSize: '12.5px',
             cursor: 'pointer',
             borderBottom: viewTab === 'active' ? '2px solid var(--brand, #ef233c)' : '2px solid transparent',
             color: viewTab === 'active' ? 'var(--brand, #ef233c)' : '#64748b',
@@ -371,11 +380,11 @@ export default function DocumentsPage() {
         <button
           onClick={() => handleTabChange('trash')}
           style={{
-            padding: '8px 16px',
+            padding: '6px 14px',
             border: 'none',
             background: 'none',
             fontWeight: 600,
-            fontSize: 14,
+            fontSize: '12.5px',
             cursor: 'pointer',
             borderBottom: viewTab === 'trash' ? '2px solid var(--brand, #ef233c)' : '2px solid transparent',
             color: viewTab === 'trash' ? 'var(--brand, #ef233c)' : '#64748b',
@@ -387,11 +396,11 @@ export default function DocumentsPage() {
           <button
             onClick={() => handleTabChange('dashboard')}
             style={{
-              padding: '8px 16px',
+              padding: '6px 14px',
               border: 'none',
               background: 'none',
               fontWeight: 600,
-              fontSize: 14,
+              fontSize: '12.5px',
               cursor: 'pointer',
               borderBottom: viewTab === 'dashboard' ? '2px solid var(--brand, #ef233c)' : '2px solid transparent',
               color: viewTab === 'dashboard' ? 'var(--brand, #ef233c)' : '#64748b',
@@ -400,7 +409,7 @@ export default function DocumentsPage() {
               gap: 6,
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
             </svg>
             Branch Dashboard
@@ -417,26 +426,28 @@ export default function DocumentsPage() {
         <>
 
       {/* Primary Search Bar & Controls */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-        <form onSubmit={handleSearchSubmit} className="search-bar" style={{ flex: 1, minWidth: 280, margin: 0 }}>
-          <span className="search-icon"><IconSearch /></span>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+        <form onSubmit={handleSearchSubmit} className="search-bar" style={{ flex: 1, minWidth: 260, margin: 0, height: '34px' }}>
+          <span className="search-icon" style={{ display: 'flex', alignItems: 'center' }}><IconSearch /></span>
           <input
             type="text"
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
             placeholder="Search OCR content, invoice #, vendor, GSTIN, filename…"
             className="search-input"
+            style={{ fontSize: '12.5px' }}
           />
           {inputVal && (
             <button
               type="button"
               className="btn btn-ghost btn-sm"
               onClick={() => { setInputVal(''); setSearch(''); setPage(1); }}
+              style={{ fontSize: '12px', padding: '2px 8px' }}
             >
               Clear
             </button>
           )}
-          <button type="submit" className="btn btn-primary btn-sm">Search</button>
+          <button type="submit" className="btn btn-primary btn-sm" style={{ fontSize: '12px', padding: '5px 12px' }}>Search</button>
         </form>
 
         {/* Filter Panel Toggle */}
@@ -444,7 +455,7 @@ export default function DocumentsPage() {
           type="button"
           onClick={() => setFilterPanelOpen(open => !open)}
           className={`btn ${filterPanelOpen || activeFilterCount > 0 ? 'btn-primary' : 'btn-secondary'}`}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '12px', height: '34px', padding: '5px 12px' }}
         >
           <IconFilter />
           <span>Filters</span>
@@ -453,11 +464,11 @@ export default function DocumentsPage() {
               style={{
                 backgroundColor: filterPanelOpen || activeFilterCount > 0 ? '#fff' : 'var(--brand, #ef233c)',
                 color: filterPanelOpen || activeFilterCount > 0 ? 'var(--brand, #ef233c)' : '#fff',
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: 700,
                 borderRadius: '50%',
-                width: 18,
-                height: 18,
+                width: 16,
+                height: 16,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -480,13 +491,14 @@ export default function DocumentsPage() {
               setPage(1);
             }}
             style={{
-              padding: '8px 12px',
+              padding: '4px 10px',
               borderRadius: 6,
               border: '1px solid #cbd5e1',
               background: '#fff',
-              fontSize: 13,
+              fontSize: '12px',
               fontWeight: 500,
               cursor: 'pointer',
+              height: '34px',
             }}
           >
             <option value="">All Statuses</option>
@@ -502,13 +514,14 @@ export default function DocumentsPage() {
           value={pageSize}
           onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
           style={{
-            padding: '8px 12px',
+            padding: '4px 10px',
             borderRadius: 6,
             border: '1px solid #cbd5e1',
             background: '#fff',
-            fontSize: 13,
+            fontSize: '12px',
             fontWeight: 500,
             cursor: 'pointer',
+            height: '34px',
           }}
         >
           <option value="10">10 / page</option>
@@ -524,28 +537,28 @@ export default function DocumentsPage() {
           style={{
             backgroundColor: '#ffffff',
             border: '1px solid #cbd5e1',
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 16,
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+            borderRadius: 6,
+            padding: 12,
+            marginBottom: 12,
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.05)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1e293b' }}>Structured Filters</h4>
-            <span style={{ fontSize: 12, color: '#64748b' }}>Combine multiple filters to refine your search</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1e293b' }}>Structured Filters</h4>
+            <span style={{ fontSize: 11.5, color: '#64748b' }}>Combine multiple filters to refine your search</span>
           </div>
 
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: 12,
-              marginBottom: 14,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: 10,
+              marginBottom: 10,
             }}
           >
             {/* Vendor Name */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Vendor / Seller Name
               </label>
               <input
@@ -553,13 +566,13 @@ export default function DocumentsPage() {
                 placeholder="e.g. Lucky Computers"
                 value={filters.vendorName}
                 onChange={e => setFilters({ ...filters, vendorName: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Invoice Number */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Invoice Number
               </label>
               <input
@@ -567,13 +580,13 @@ export default function DocumentsPage() {
                 placeholder="e.g. LC-25-26/4280"
                 value={filters.invoiceNumber}
                 onChange={e => setFilters({ ...filters, invoiceNumber: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* GSTIN */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 GSTIN
               </label>
               <input
@@ -581,73 +594,73 @@ export default function DocumentsPage() {
                 placeholder="e.g. 33BLAPS0819R1ZQ"
                 value={filters.gstin}
                 onChange={e => setFilters({ ...filters, gstin: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Amount Min */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Min Amount (₹)
               </label>
               <input
                 type="text"
-                placeholder="e.g. 50,000 or 50000"
+                placeholder="e.g. 50,000"
                 value={filters.amountMin}
                 onChange={e => setFilters({ ...filters, amountMin: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Amount Max */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Max Amount (₹)
               </label>
               <input
                 type="text"
-                placeholder="e.g. 1,00,000 or 100000"
+                placeholder="e.g. 1,00,000"
                 value={filters.amountMax}
                 onChange={e => setFilters({ ...filters, amountMax: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Date From */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Date From
               </label>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={e => setFilters({ ...filters, dateFrom: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Date To */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Date To
               </label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={e => setFilters({ ...filters, dateTo: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1' }}
               />
             </div>
 
             {/* Invoice Type */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 Invoice Type
               </label>
               <select
                 value={filters.invoiceType}
                 onChange={e => setFilters({ ...filters, invoiceType: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1', background: '#fff' }}
               >
                 <option value="">All Invoice Types</option>
                 {INVOICE_TYPES.map(t => (
@@ -658,13 +671,13 @@ export default function DocumentsPage() {
 
             {/* Document / File Format */}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                 File Format
               </label>
               <select
                 value={filters.documentType}
                 onChange={e => setFilters({ ...filters, documentType: e.target.value })}
-                style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1', background: '#fff' }}
               >
                 <option value="">All Formats</option>
                 <option value="pdf">PDF Documents</option>
@@ -675,13 +688,13 @@ export default function DocumentsPage() {
             {/* Branch Selector (for Admins with branches) */}
             {branches.length > 0 && (
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#475569', marginBottom: 4 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#475569', marginBottom: 3 }}>
                   Branch
                 </label>
                 <select
                   value={filters.branchId}
                   onChange={e => setFilters({ ...filters, branchId: e.target.value })}
-                  style={{ width: '100%', padding: '6px 10px', fontSize: 13, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff' }}
+                  style={{ width: '100%', padding: '5px 8px', fontSize: 12, borderRadius: 5, border: '1px solid #cbd5e1', background: '#fff' }}
                 >
                   <option value="">All Assigned Branches</option>
                   {branches.map(b => (
@@ -692,11 +705,12 @@ export default function DocumentsPage() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleResetFilters}
+              style={{ fontSize: '11.5px', padding: '4px 10px' }}
             >
               Reset All
             </button>
@@ -704,6 +718,7 @@ export default function DocumentsPage() {
               type="button"
               className="btn btn-primary btn-sm"
               onClick={handleApplyFilters}
+              style={{ fontSize: '11.5px', padding: '4px 10px' }}
             >
               Apply Filters
             </button>
@@ -713,85 +728,87 @@ export default function DocumentsPage() {
 
       {/* Active Filter Chips */}
       {activeFilterCount > 0 && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
-          <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Active Filters:</span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Active Filters:</span>
           {activeFilters.vendorName && (
-            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Vendor: {activeFilters.vendorName}
-              <button type="button" onClick={() => handleRemoveSingleFilter('vendorName')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('vendorName')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.invoiceNumber && (
-            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Invoice #: {activeFilters.invoiceNumber}
-              <button type="button" onClick={() => handleRemoveSingleFilter('invoiceNumber')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('invoiceNumber')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.gstin && (
-            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#e0f2fe', color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               GSTIN: {activeFilters.gstin}
-              <button type="button" onClick={() => handleRemoveSingleFilter('gstin')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('gstin')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0369a1', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.amountMin && (
-            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Min: ₹{activeFilters.amountMin}
-              <button type="button" onClick={() => handleRemoveSingleFilter('amountMin')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#92400e', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('amountMin')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#92400e', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.amountMax && (
-            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#fef3c7', color: '#92400e', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Max: ₹{activeFilters.amountMax}
-              <button type="button" onClick={() => handleRemoveSingleFilter('amountMax')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#92400e', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('amountMax')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#92400e', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.dateFrom && (
-            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               From: {activeFilters.dateFrom}
-              <button type="button" onClick={() => handleRemoveSingleFilter('dateFrom')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('dateFrom')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.dateTo && (
-            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               To: {activeFilters.dateTo}
-              <button type="button" onClick={() => handleRemoveSingleFilter('dateTo')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('dateTo')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.invoiceType && (
-            <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Invoice Type: {activeFilters.invoiceType}
-              <button type="button" onClick={() => handleRemoveSingleFilter('invoiceType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b91c1c', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('invoiceType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#b91c1c', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           {activeFilters.documentType && (
-            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
+            <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11 }}>
               Format: {activeFilters.documentType.toUpperCase()}
-              <button type="button" onClick={() => handleRemoveSingleFilter('documentType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold' }}>×</button>
+              <button type="button" onClick={() => handleRemoveSingleFilter('documentType')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#334155', fontWeight: 'bold', fontSize: 12 }}>×</button>
             </span>
           )}
           <button
             type="button"
             onClick={handleResetFilters}
-            style={{ border: 'none', background: 'none', color: 'var(--brand, #ef233c)', fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}
+            style={{ border: 'none', background: 'none', color: 'var(--brand, #ef233c)', fontSize: 11.5, textDecoration: 'underline', cursor: 'pointer' }}
           >
             Clear All
           </button>
         </div>
       )}
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && <div className="alert alert-error" style={{ fontSize: '12.5px', padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
 
       {/* Documents table */}
       {loading && docs.length === 0 ? (
         <div className="table-container">
-          <div className="loading-state"><div className="spinner" /><p>Loading documents…</p></div>
+          <div className="loading-state" style={{ padding: '32px 16px' }}><div className="spinner" /><p style={{ fontSize: '13px' }}>Loading documents…</p></div>
         </div>
       ) : docs.length === 0 ? (
         <div className="table-container">
-          <div className="empty-state">
+          <div className="empty-state" style={{ padding: '36px 16px' }}>
             <div className="empty-icon"><IconFolder /></div>
-            <h3>{viewTab === 'trash' ? 'Trash is empty' : search || activeFilterCount > 0 ? 'No matching documents' : 'No documents yet'}</h3>
-            <p>
+            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', margin: '8px 0 4px 0' }}>
+              {viewTab === 'trash' ? 'Trash is empty' : search || activeFilterCount > 0 ? 'No matching documents' : 'No documents yet'}
+            </h3>
+            <p style={{ fontSize: '12.5px', color: '#64748b', maxWidth: 460, margin: '0 auto 14px auto' }}>
               {viewTab === 'trash'
                 ? 'No soft-deleted documents found in your organization.'
                 : search || activeFilterCount > 0
@@ -799,12 +816,12 @@ export default function DocumentsPage() {
                 : 'Upload your first document to begin.'}
             </p>
             {viewTab === 'active' && !search && activeFilterCount === 0 && (
-              <button className="btn btn-primary" onClick={() => navigate('/upload')}>
+              <button className="btn btn-primary" onClick={() => navigate('/upload')} style={{ fontSize: '12px', padding: '6px 14px' }}>
                 Upload Documents
               </button>
             )}
             {(search || activeFilterCount > 0) && (
-              <button className="btn btn-secondary" onClick={handleResetFilters}>
+              <button className="btn btn-secondary" onClick={handleResetFilters} style={{ fontSize: '12px', padding: '6px 14px' }}>
                 Reset Search &amp; Filters
               </button>
             )}
@@ -812,8 +829,8 @@ export default function DocumentsPage() {
         </div>
       ) : (
         <div className="table-container">
-          <div className="table-header-bar">
-            <span className="table-header-bar-title">
+          <div className="table-header-bar" style={{ padding: '8px 14px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <span className="table-header-bar-title" style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
               {viewTab === 'trash'
                 ? 'Deleted Archive'
                 : search
@@ -822,184 +839,221 @@ export default function DocumentsPage() {
                 ? 'Filtered Documents'
                 : 'Documents'}
             </span>
-            <span className="table-header-bar-count">
+            <span className="table-header-bar-count" style={{ fontSize: '11px', padding: '2px 8px', borderRadius: 12, backgroundColor: '#f1f5f9', color: '#64748b' }}>
               Showing {docs.length} of {totalCount} document{totalCount !== 1 ? 's' : ''}
             </span>
           </div>
 
-          <table className="doc-table">
-            <thead>
-              <tr>
-                <th style={{ width: 50 }}>Preview</th>
-                <th>Document Details</th>
-                <th>Branch</th>
-                <th>Uploaded By</th>
-                <th>Size</th>
-                <th>Status</th>
-                <th>{viewTab === 'trash' ? 'Deleted At' : 'Date'}</th>
-                <th style={{ width: 60 }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {docs.map((doc) => {
-                const isPdf = doc.mime_type === 'application/pdf' || (doc.original_filename && doc.original_filename.toLowerCase().endsWith('.pdf'));
-                const vendor = doc.vendor_name || doc.seller_name;
-                const totalFormatted = formatIndianCurrency(doc.grand_total ?? doc.invoice_amount, doc.currency);
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="doc-table" style={{ width: '100%', tableLayout: 'fixed', minWidth: 840 }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ width: 44, padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Preview</th>
+                  <th style={{ width: '32%', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Document Details</th>
+                  <th style={{ width: '16%', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Branch</th>
+                  <th style={{ width: '14%', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Uploaded By</th>
+                  <th style={{ width: '8%', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Size</th>
+                  <th style={{ width: '12%', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Status</th>
+                  <th style={{ width: '12%', whiteSpace: 'nowrap', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>{viewTab === 'trash' ? 'Deleted At' : 'Date'}</th>
+                  <th style={{ width: viewTab === 'trash' ? 85 : 55, textAlign: 'center', padding: '8px 10px', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#64748b' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {docs.map((doc) => {
+                  const isPdf = doc.mime_type === 'application/pdf' || (doc.original_filename && doc.original_filename.toLowerCase().endsWith('.pdf'));
+                  const vendor = doc.vendor_name || doc.seller_name;
+                  const totalFormatted = formatIndianCurrency(doc.grand_total ?? doc.invoice_amount, doc.currency);
 
-                return (
-                  <tr
-                    key={doc.id}
-                    className="doc-row"
-                    onClick={() => viewTab === 'active' && navigate(`/documents/${doc.id}`)}
-                    style={{ cursor: viewTab === 'active' ? 'pointer' : 'default' }}
-                  >
-                    {/* Thumbnail preview cell */}
-                    <td style={{ verticalAlign: 'middle', padding: '8px 12px' }}>
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 6,
-                          overflow: 'hidden',
-                          backgroundColor: '#f1f5f9',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid #e2e8f0',
-                        }}
-                      >
-                        <img
-                          src={api.getThumbnailUrl(doc.id)}
-                          alt={doc.original_filename}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            if (e.target.nextSibling) {
-                              e.target.nextSibling.style.display = 'flex';
-                            }
-                          }}
-                        />
+                  return (
+                    <tr
+                      key={doc.id}
+                      className="doc-row"
+                      onClick={() => viewTab === 'active' && navigate(`/documents/${doc.id}`)}
+                      style={{ cursor: viewTab === 'active' ? 'pointer' : 'default' }}
+                    >
+                      {/* Thumbnail preview cell */}
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', width: 48 }}>
                         <div
                           style={{
-                            display: 'none',
-                            width: '100%',
-                            height: '100%',
+                            width: 36,
+                            height: 36,
+                            borderRadius: 4,
+                            overflow: 'hidden',
+                            backgroundColor: '#f1f5f9',
+                            display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: isPdf ? '#dc2626' : '#2563eb',
+                            border: '1px solid #e2e8f0',
+                            flexShrink: 0,
                           }}
                         >
-                          {isPdf ? <IconFilePdf /> : <IconFileImg />}
+                          <img
+                            src={api.getThumbnailUrl(doc.id)}
+                            alt={doc.original_filename}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) {
+                                e.target.nextSibling.style.display = 'flex';
+                              }
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: 'none',
+                              width: '100%',
+                              height: '100%',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isPdf ? '#dc2626' : '#2563eb',
+                            }}
+                          >
+                            {isPdf ? <IconFilePdf /> : <IconFileImg />}
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Document details cell */}
-                    <td>
-                      <div>
-                        <span className="filename" style={{ fontWeight: 600, color: '#0f172a' }}>
-                          {doc.original_filename}
+                      {/* Document details cell */}
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px' }}>
+                        <div>
+                          <span
+                            className="filename"
+                            style={{
+                              fontWeight: 600,
+                              color: '#0f172a',
+                              fontSize: '12.5px',
+                              display: 'block',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={doc.original_filename}
+                          >
+                            {doc.original_filename}
+                          </span>
+
+                          {/* Extracted metadata badges */}
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 3, alignItems: 'center' }}>
+                            {doc.invoice_type && (
+                              <span
+                                style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 600,
+                                  padding: '1px 5px',
+                                  borderRadius: 3,
+                                  backgroundColor: '#fef2f2',
+                                  color: '#b91c1c',
+                                  border: '1px solid #fecaca',
+                                }}
+                              >
+                                {doc.invoice_type}
+                              </span>
+                            )}
+                            {doc.invoice_number && (
+                              <span
+                                style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 600,
+                                  padding: '1px 5px',
+                                  borderRadius: 3,
+                                  backgroundColor: '#f1f5f9',
+                                  color: '#334155',
+                                  border: '1px solid #cbd5e1',
+                                }}
+                              >
+                                INV: {doc.invoice_number}
+                              </span>
+                            )}
+                            {vendor && (
+                              <span
+                                style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 500,
+                                  padding: '1px 5px',
+                                  borderRadius: 3,
+                                  backgroundColor: '#ecfdf5',
+                                  color: '#065f46',
+                                  border: '1px solid #a7f3d0',
+                                }}
+                              >
+                                {vendor}
+                              </span>
+                            )}
+                            {totalFormatted && (
+                              <span
+                                style={{
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  padding: '1px 5px',
+                                  borderRadius: 3,
+                                  backgroundColor: '#eff6ff',
+                                  color: '#1d4ed8',
+                                  border: '1px solid #bfdbfe',
+                                }}
+                              >
+                                {totalFormatted}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Highlighted OCR snippet */}
+                          <SearchSnippet snippet={doc.snippet} />
+                        </div>
+                      </td>
+
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {doc.branch_name || 'Main'}
+                      </td>
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {doc.uploader_name}
+                      </td>
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {formatBytes(doc.file_size)}
+                      </td>
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px' }}>
+                        <span className={`status-badge ${STATUS_COLORS[doc.ocr_status] || ''}`} style={{ fontSize: '10.5px', padding: '2px 7px' }}>
+                          {STATUS_LABELS[doc.ocr_status] || doc.ocr_status}
                         </span>
-
-                        {/* Extracted metadata badges */}
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
-                          {doc.invoice_type && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#fef2f2',
-                                color: '#b91c1c',
-                                border: '1px solid #fecaca',
-                              }}
-                            >
-                              {doc.invoice_type}
-                            </span>
-                          )}
-                          {doc.invoice_number && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#f1f5f9',
-                                color: '#334155',
-                                border: '1px solid #cbd5e1',
-                              }}
-                            >
-                              INV: {doc.invoice_number}
-                            </span>
-                          )}
-                          {vendor && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 500,
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#ecfdf5',
-                                color: '#065f46',
-                                border: '1px solid #a7f3d0',
-                              }}
-                            >
-                              {vendor}
-                            </span>
-                          )}
-                          {totalFormatted && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 700,
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                backgroundColor: '#eff6ff',
-                                color: '#1d4ed8',
-                                border: '1px solid #bfdbfe',
-                              }}
-                            >
-                              {totalFormatted}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Highlighted OCR snippet */}
-                        <SearchSnippet snippet={doc.snippet} />
-                      </div>
-                    </td>
-
-                    <td>{doc.branch_name || 'Main'}</td>
-                    <td>{doc.uploader_name}</td>
-                    <td>{formatBytes(doc.file_size)}</td>
-                    <td>
-                      <span className={`status-badge ${STATUS_COLORS[doc.ocr_status] || ''}`}>
-                        {STATUS_LABELS[doc.ocr_status] || doc.ocr_status}
-                      </span>
-                    </td>
-                    <td>{formatDate(viewTab === 'trash' ? doc.deleted_at : (doc.invoice_date || doc.created_at))}</td>
-                    <td>
-                      {viewTab === 'trash' ? (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRestoreDocTarget(doc);
-                          }}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                        >
-                          <IconRestore /> Restore
-                        </button>
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)' }}><IconArrow /></span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', fontSize: '12px', color: '#475569', whiteSpace: 'nowrap' }}>
+                        {formatDate(viewTab === 'trash' ? doc.deleted_at : (doc.invoice_date || doc.created_at))}
+                      </td>
+                      <td style={{ verticalAlign: 'middle', padding: '7px 10px', textAlign: 'center' }}>
+                        {viewTab === 'trash' ? (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRestoreDocTarget(doc);
+                            }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '11px', padding: '3px 8px' }}
+                          >
+                            <IconRestore /> Restore
+                          </button>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              backgroundColor: '#f1f5f9',
+                              color: '#64748b',
+                            }}
+                            title="View document"
+                          >
+                            <IconArrow />
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {/* Pagination bar */}
           <div
@@ -1007,20 +1061,21 @@ export default function DocumentsPage() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              padding: '12px 16px',
+              padding: '8px 14px',
               borderTop: '1px solid #e2e8f0',
-              fontSize: 13,
+              fontSize: '12px',
               color: '#64748b',
             }}
           >
             <div>
               Page {page} of {totalPages} ({totalCount} total)
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
               <button
                 className="btn btn-secondary btn-sm"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page <= 1}
+                style={{ fontSize: '11.5px', padding: '4px 10px' }}
               >
                 Previous
               </button>
@@ -1028,6 +1083,7 @@ export default function DocumentsPage() {
                 className="btn btn-secondary btn-sm"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
+                style={{ fontSize: '11.5px', padding: '4px 10px' }}
               >
                 Next
               </button>

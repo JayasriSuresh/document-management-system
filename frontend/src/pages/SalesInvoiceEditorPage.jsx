@@ -627,7 +627,7 @@ export default function SalesInvoiceEditorPage() {
   const isInterState = activeGst ? activeGst.state_code !== posStateCode : false;
 
   return (
-    <div className="page-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="page-content" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
       {/* Header */}
       <div className="page-header" style={{ marginBottom: '1.5rem' }}>
         <div>

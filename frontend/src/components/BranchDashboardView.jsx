@@ -251,49 +251,49 @@ export default function BranchDashboardView({
   const pctFailed = docTotal > 0 ? Math.round(((docStatus.failed || 0) / docTotal) * 100) : 0;
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+    <div style={{ width: '100%', maxWidth: '100%' }}>
       {/* ── Section Header & Branch Switcher ─────────────────────────── */}
       <div style={{
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        marginBottom: '24px',
+        marginBottom: '16px',
         flexWrap: 'wrap',
-        gap: '16px'
+        gap: '12px'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, margin: 0, color: '#0f172a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
               Branch Operational Dashboard
             </h2>
             {branch_info.code && (
               <span style={{
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 700,
                 color: '#2563eb',
                 backgroundColor: '#eff6ff',
-                padding: '2px 8px',
-                borderRadius: '6px',
+                padding: '1px 6px',
+                borderRadius: '4px',
                 border: '1px solid #bfdbfe',
               }}>
                 {branch_info.code}
               </span>
             )}
             <span style={{
-              fontSize: '11px',
+              fontSize: '10.5px',
               fontWeight: 700,
               textTransform: 'uppercase',
               color: branch_info.status === 'active' ? '#166534' : '#991b1b',
               backgroundColor: branch_info.status === 'active' ? '#dcfce7' : '#fee2e2',
-              padding: '2px 8px',
-              borderRadius: '6px',
+              padding: '1px 6px',
+              borderRadius: '4px',
               border: `1px solid ${branch_info.status === 'active' ? '#bbf7d0' : '#fecaca'}`,
             }}>
               {branch_info.status || 'Active'}
             </span>
           </div>
 
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+          <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
             {branch_info.name ? (
               <span>
                 <strong>{branch_info.name}</strong> &middot; {branch_info.branch_type || 'Branch'}
@@ -306,25 +306,26 @@ export default function BranchDashboardView({
         </div>
 
         {/* Branch Selector & Export Menu */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {branches.length > 1 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
                 Branch:
               </label>
               <select
                 value={selectedBranchId || ''}
                 onChange={(e) => setSelectedBranchId(Number(e.target.value))}
                 style={{
-                  padding: '7px 12px',
+                  padding: '5px 10px',
                   borderRadius: '6px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   color: '#0f172a',
                   backgroundColor: '#ffffff',
                   cursor: 'pointer',
-                  minWidth: '180px',
+                  minWidth: '160px',
+                  height: '34px',
                 }}
               >
                 {branches.map(b => (
@@ -337,27 +338,27 @@ export default function BranchDashboardView({
           )}
 
           {/* Export Dropdown / Actions */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
             <button
               onClick={() => handleExportCsv('documents')}
               disabled={exportingReport !== null || loading}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 backgroundColor: '#ffffff',
                 color: '#334155',
-                padding: '8px 14px',
-                borderRadius: '8px',
+                padding: '5px 12px',
+                borderRadius: '6px',
                 border: '1px solid #cbd5e1',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: exportingReport ? 'not-allowed' : 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                height: '34px',
               }}
               title="Export all documents in this branch as CSV"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               {exportingReport === 'documents' ? 'Exporting...' : 'Export Docs CSV'}
@@ -369,20 +370,20 @@ export default function BranchDashboardView({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 backgroundColor: '#ffffff',
                 color: '#334155',
-                padding: '8px 14px',
-                borderRadius: '8px',
+                padding: '5px 12px',
+                borderRadius: '6px',
                 border: '1px solid #cbd5e1',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: exportingReport ? 'not-allowed' : 'pointer',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                height: '34px',
               }}
               title="Export all invoices in this branch as CSV"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               {exportingReport === 'invoices' ? 'Exporting...' : 'Export Invoices'}
@@ -395,19 +396,18 @@ export default function BranchDashboardView({
       <div style={{
         backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        padding: '16px 20px',
-        marginBottom: '24px',
+        borderRadius: '8px',
+        padding: '10px 14px',
+        marginBottom: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
-        gap: '14px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+        gap: '10px',
       }}>
         {/* Date Presets */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>
             Time Window:
           </span>
           {[
@@ -421,12 +421,12 @@ export default function BranchDashboardView({
               key={p.id}
               onClick={() => setDatePreset(p.id)}
               style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
+                padding: '4px 10px',
+                borderRadius: '5px',
                 border: datePreset === p.id ? '1px solid #ef233c' : '1px solid #cbd5e1',
                 backgroundColor: datePreset === p.id ? '#fef2f2' : '#ffffff',
                 color: datePreset === p.id ? '#b91c1c' : '#475569',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease-in-out',
@@ -438,29 +438,29 @@ export default function BranchDashboardView({
 
           {/* Custom Date Pickers */}
           {datePreset === 'custom' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: '4px' }}>
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 style={{
-                  padding: '5px 8px',
-                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  borderRadius: '5px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   color: '#0f172a',
                 }}
               />
-              <span style={{ color: '#94a3b8', fontSize: '12px' }}>to</span>
+              <span style={{ color: '#94a3b8', fontSize: '11px' }}>to</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
                 style={{
-                  padding: '5px 8px',
-                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  borderRadius: '5px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   color: '#0f172a',
                 }}
               />
@@ -472,20 +472,21 @@ export default function BranchDashboardView({
           onClick={loadDashboard}
           disabled={loading}
           style={{
-            padding: '7px 14px',
+            padding: '5px 12px',
             borderRadius: '6px',
             border: '1px solid #cbd5e1',
             backgroundColor: '#ffffff',
             color: '#334155',
-            fontSize: '13px',
+            fontSize: '12px',
             fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
+            height: '32px',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}>
             <path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
           Refresh
@@ -664,30 +665,29 @@ export default function BranchDashboardView({
           {/* ── Key KPI Cards ────────────────────────────────────────── */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-            gap: '16px',
-            marginBottom: '28px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '12px',
+            marginBottom: '16px',
           }}>
             {/* Card 1: Documents */}
             <div style={{
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              padding: '14px 16px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Branch Documents
                 </span>
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <div style={{ width: '24px', height: '24px', borderRadius: '5px', backgroundColor: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#0f172a' }}>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
                 {formatNumber(docTotal)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
                 <span style={{ color: '#16a34a', fontWeight: 600 }}>{docStatus.completed || 0} completed</span> &middot; {docStatus.failed || 0} failed
               </div>
             </div>
@@ -695,23 +695,22 @@ export default function BranchDashboardView({
             {/* Card 2: Storage Used */}
             <div style={{
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              padding: '14px 16px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Storage Volume
                 </span>
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                <div style={{ width: '24px', height: '24px', borderRadius: '5px', backgroundColor: '#fff7ed', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
                 </div>
               </div>
-              <div style={{ fontSize: '28px', fontWeight: 700, color: '#0f172a' }}>
-                {documents.storage_used_mb || 0} <span style={{ fontSize: '14px', fontWeight: 500, color: '#64748b' }}>MB</span>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
+                {documents.storage_used_mb || 0} <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>MB</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
                 {(documents.storage_used_bytes || 0).toLocaleString()} bytes stored
               </div>
             </div>
@@ -719,23 +718,22 @@ export default function BranchDashboardView({
             {/* Card 3: Invoices Total */}
             <div style={{
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              padding: '14px 16px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Invoice Volume
                 </span>
-                <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <div style={{ width: '24px', height: '24px', borderRadius: '5px', backgroundColor: '#f0fdf4', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 </div>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
                 {formatCurrencyINR(invoices.total_grand_amount || 0)}
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>
                 {invoices.total_invoices || 0} total invoices ({invoices.by_kind?.generated?.count || 0} outbound sales)
               </div>
             </div>
@@ -743,31 +741,30 @@ export default function BranchDashboardView({
             {/* Card 4: AI Usage Spend */}
             <div style={{
               backgroundColor: '#ffffff',
-              borderRadius: '12px',
+              borderRadius: '8px',
               border: '1px solid #e2e8f0',
-              padding: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              padding: '14px 16px',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   Branch AI Spend
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#0284c7', backgroundColor: '#e0f2fe', padding: '2px 6px', borderRadius: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 600, color: '#0284c7', backgroundColor: '#e0f2fe', padding: '1px 5px', borderRadius: '3px' }}>
                     ₹ / $ Dual
                   </span>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#fdf2f8', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '5px', backgroundColor: '#fdf2f8', color: '#db2777', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '12px' }}>
                     ₹
                   </div>
                 </div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a' }}>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
                 {formatCurrencyINR(ai_usage.cost_inr !== undefined ? ai_usage.cost_inr : (ai_usage.estimated_cost_usd || 0) * (ai_usage.exchange_rate || 85))}
               </div>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
+              <div style={{ fontSize: '11.5px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>
                 {formatUSD(ai_usage.estimated_cost_usd || 0)} USD
               </div>
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                 {formatNumber(ai_usage.total_calls || 0)} calls &middot; {formatNumber(ai_usage.total_tokens || 0)} tokens
               </div>
             </div>
@@ -777,17 +774,16 @@ export default function BranchDashboardView({
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '28px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            borderRadius: '8px',
+            padding: '16px 18px',
+            marginBottom: '16px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 2px 0', color: '#0f172a' }}>
                   Document Ingestion &amp; OCR Throughput
                 </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
                   Distribution of documents by extraction pipeline status.
                 </p>
               </div>
@@ -796,7 +792,7 @@ export default function BranchDashboardView({
                 <button
                   onClick={onNavigateToDocs}
                   style={{
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     color: '#ef233c',
                     background: 'none',
@@ -814,13 +810,13 @@ export default function BranchDashboardView({
 
             {/* Visual Stacked Progress Bar */}
             <div style={{
-              height: '12px',
+              height: '10px',
               width: '100%',
               backgroundColor: '#f1f5f9',
-              borderRadius: '6px',
+              borderRadius: '5px',
               overflow: 'hidden',
               display: 'flex',
-              marginBottom: '16px',
+              marginBottom: '12px',
             }}>
               {pctCompleted > 0 && (
                 <div
@@ -851,45 +847,45 @@ export default function BranchDashboardView({
             {/* Status Breakdown Grid */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '12px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: '10px',
             }}>
-              <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>Completed</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#14532d', marginTop: '2px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#166534', textTransform: 'uppercase' }}>Completed</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#14532d', marginTop: '2px' }}>
                   {formatNumber(docStatus.completed || 0)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#166534', marginTop: '2px' }}>
+                <div style={{ fontSize: '10.5px', color: '#166534', marginTop: '2px' }}>
                   {pctCompleted}% of total
                 </div>
               </div>
 
-              <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>Processing</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#1e3a8a', marginTop: '2px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase' }}>Processing</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#1e3a8a', marginTop: '2px' }}>
                   {formatNumber(docStatus.processing || 0)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#1e40af', marginTop: '2px' }}>
+                <div style={{ fontSize: '10.5px', color: '#1e40af', marginTop: '2px' }}>
                   {pctProcessing}% in queue/OCR
                 </div>
               </div>
 
-              <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>Uploaded</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#78350f', marginTop: '2px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#92400e', textTransform: 'uppercase' }}>Uploaded</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#78350f', marginTop: '2px' }}>
                   {formatNumber(docStatus.uploaded || 0)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#92400e', marginTop: '2px' }}>
+                <div style={{ fontSize: '10.5px', color: '#92400e', marginTop: '2px' }}>
                   {pctUploaded}% awaiting processing
                 </div>
               </div>
 
-              <div style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase' }}>Failed</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#7f1d1d', marginTop: '2px' }}>
+              <div style={{ padding: '10px 12px', borderRadius: '6px', backgroundColor: '#fef2f2', border: '1px solid #fecaca' }}>
+                <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#991b1b', textTransform: 'uppercase' }}>Failed</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#7f1d1d', marginTop: '2px' }}>
                   {formatNumber(docStatus.failed || 0)}
                 </div>
-                <div style={{ fontSize: '11px', color: '#991b1b', marginTop: '2px' }}>
+                <div style={{ fontSize: '10.5px', color: '#991b1b', marginTop: '2px' }}>
                   {pctFailed}% error rate
                 </div>
               </div>
@@ -900,17 +896,16 @@ export default function BranchDashboardView({
           <div style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '28px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            borderRadius: '8px',
+            padding: '16px 18px',
+            marginBottom: '16px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 2px 0', color: '#0f172a' }}>
                   Branch Invoice &amp; Tax Summary
                 </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
                   Financial aggregates for supplier copies and generated sales invoices.
                 </p>
               </div>
@@ -918,27 +913,27 @@ export default function BranchDashboardView({
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '16px',
-              marginBottom: '20px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px',
+              marginBottom: '14px',
             }}>
-              <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Total Taxable Value</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Total Taxable Value</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
                   {formatCurrencyINR(invoices.total_taxable_amount || 0)}
                 </div>
               </div>
 
-              <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Total GST Tax Amount</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Total GST Tax Amount</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
                   {formatCurrencyINR(invoices.total_tax_amount || 0)}
                 </div>
               </div>
 
-              <div style={{ padding: '16px', borderRadius: '8px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Total Grand Amount</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ padding: '12px', borderRadius: '6px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Total Grand Amount</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>
                   {formatCurrencyINR(invoices.total_grand_amount || 0)}
                 </div>
               </div>
@@ -946,49 +941,49 @@ export default function BranchDashboardView({
 
             {/* Breakdown by Kind Table */}
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                    <th style={{ padding: '10px 12px' }}>Invoice Kind</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Count</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Taxable Value</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>GST Tax</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Grand Total</th>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: '#f8fafc' }}>
+                    <th style={{ padding: '8px 10px' }}>Invoice Kind</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Count</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Taxable Value</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>GST Tax</th>
+                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>Grand Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>
+                    <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>
                       Supplier Invoices (Uploaded Copies)
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
                       {formatNumber(invoices.by_kind?.copy?.count || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.copy?.taxable || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.copy?.tax || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.copy?.grand_total || 0)}
                     </td>
                   </tr>
 
                   <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px', fontWeight: 600, color: '#0f172a' }}>
+                    <td style={{ padding: '8px 10px', fontWeight: 600, color: '#0f172a' }}>
                       Outbound Sales Invoices (Generated)
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right' }}>
                       {formatNumber(invoices.by_kind?.generated?.count || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.generated?.taxable || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.generated?.tax || 0)}
                     </td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
+                    <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, fontFamily: 'monospace' }}>
                       {formatCurrencyINR(invoices.by_kind?.generated?.grand_total || 0)}
                     </td>
                   </tr>
@@ -1003,17 +998,16 @@ export default function BranchDashboardView({
             style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '28px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+            borderRadius: '8px',
+            padding: '16px 18px',
+            marginBottom: '16px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 4px 0', color: '#0f172a' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 2px 0', color: '#0f172a' }}>
                   Recent Background Job Diagnostics
                 </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
                   Safe, sanitized failure reasons and one-click reprocessing for this branch.
                 </p>
               </div>
@@ -1023,7 +1017,7 @@ export default function BranchDashboardView({
                   onClick={() => handleExportCsv('failed-jobs')}
                   disabled={exportingReport !== null}
                   style={{
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     color: '#ef233c',
                     background: 'none',
@@ -1038,48 +1032,48 @@ export default function BranchDashboardView({
 
             {recent_failed_jobs.length === 0 ? (
               <div style={{
-                padding: '32px 0',
+                padding: '24px 0',
                 textAlign: 'center',
                 color: '#16a34a',
-                fontSize: '14px',
+                fontSize: '13px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
               }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
                 <span style={{ fontWeight: 600 }}>All background jobs completed successfully!</span>
-                <span style={{ color: '#64748b', fontSize: '12px' }}>No failed jobs recorded for this branch.</span>
+                <span style={{ color: '#64748b', fontSize: '11.5px' }}>No failed jobs recorded for this branch.</span>
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 12px' }}>Job ID</th>
-                      <th style={{ padding: '10px 12px' }}>Document</th>
-                      <th style={{ padding: '10px 12px' }}>Attempts</th>
-                      <th style={{ padding: '10px 12px' }}>Error Diagnostic</th>
-                      <th style={{ padding: '10px 12px' }}>Last Updated</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Action</th>
+                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.4px', backgroundColor: '#f8fafc' }}>
+                      <th style={{ padding: '8px 10px' }}>Job ID</th>
+                      <th style={{ padding: '8px 10px' }}>Document</th>
+                      <th style={{ padding: '8px 10px' }}>Attempts</th>
+                      <th style={{ padding: '8px 10px' }}>Error Diagnostic</th>
+                      <th style={{ padding: '8px 10px' }}>Last Updated</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recent_failed_jobs.map((job) => (
                       <tr key={job.job_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 600, color: '#0f172a' }}>
+                        <td style={{ padding: '8px 10px', fontFamily: 'monospace', fontWeight: 600, color: '#0f172a' }}>
                           #{job.job_id}
                         </td>
-                        <td style={{ padding: '12px', color: '#334155' }}>
+                        <td style={{ padding: '8px 10px', color: '#334155' }}>
                           {job.document_filename || (job.document_id ? `Document #${job.document_id}` : '—')}
                         </td>
-                        <td style={{ padding: '12px', color: '#64748b' }}>
+                        <td style={{ padding: '8px 10px', color: '#64748b' }}>
                           <span style={{
-                            padding: '2px 8px',
-                            borderRadius: '10px',
-                            fontSize: '11px',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10.5px',
                             fontWeight: 700,
                             backgroundColor: job.attempts >= job.max_attempts ? '#fee2e2' : '#fef3c7',
                             color: job.attempts >= job.max_attempts ? '#991b1b' : '#92400e',
@@ -1087,8 +1081,8 @@ export default function BranchDashboardView({
                             {job.attempts} / {job.max_attempts}
                           </span>
                         </td>
-                        <td style={{ padding: '12px', color: '#991b1b', maxWidth: '380px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '12px' }}>{job.error_code}</div>
+                        <td style={{ padding: '8px 10px', color: '#991b1b', maxWidth: '380px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '11.5px' }}>{job.error_code}</div>
                           <div style={{
                             fontSize: '11px',
                             color: '#64748b',
@@ -1100,21 +1094,21 @@ export default function BranchDashboardView({
                             {job.error_summary || 'Processing terminated unexpectedly.'}
                           </div>
                         </td>
-                        <td style={{ padding: '12px', color: '#64748b', fontSize: '12px' }}>
+                        <td style={{ padding: '8px 10px', color: '#64748b', fontSize: '11.5px' }}>
                           {formatDateTime(job.updated_at)}
                         </td>
-                        <td style={{ padding: '12px', textAlign: 'right' }}>
+                        <td style={{ padding: '8px 10px', textAlign: 'right' }}>
                           {job.can_reprocess && job.document_id ? (
                             <button
                               onClick={() => handleReprocess(job.document_id, job.job_id)}
                               disabled={reprocessingJobId === job.job_id}
                               style={{
-                                padding: '6px 12px',
-                                borderRadius: '6px',
+                                padding: '4px 10px',
+                                borderRadius: '5px',
                                 border: '1px solid #cbd5e1',
                                 backgroundColor: '#ffffff',
                                 color: '#0f172a',
-                                fontSize: '12px',
+                                fontSize: '11.5px',
                                 fontWeight: 600,
                                 cursor: reprocessingJobId === job.job_id ? 'not-allowed' : 'pointer',
                                 display: 'inline-flex',
@@ -1122,7 +1116,7 @@ export default function BranchDashboardView({
                                 gap: '4px',
                               }}
                             >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: reprocessingJobId === job.job_id ? 'spin 1s linear infinite' : 'none' }}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: reprocessingJobId === job.job_id ? 'spin 1s linear infinite' : 'none' }}>
                                 <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
                               </svg>
                               {reprocessingJobId === job.job_id ? 'Queuing...' : 'Reprocess'}

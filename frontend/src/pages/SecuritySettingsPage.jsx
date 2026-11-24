@@ -190,13 +190,13 @@ export default function SecuritySettingsPage() {
   };
 
   return (
-    <div style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
       {/* Header */}
-      <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.3px' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', margin: '0 0 3px 0', letterSpacing: '-0.01em' }}>
           Security &amp; Authentication
         </h1>
-        <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+        <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
           Manage two-factor authentication (TOTP), emergency recovery keys, and organization-wide security policies.
         </p>
       </div>
@@ -346,7 +346,7 @@ export default function SecuritySettingsPage() {
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Remaining Recovery Codes
                   </div>
-                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
                     {status.remaining_recovery_codes} <span style={{ fontSize: '13px', fontWeight: 400, color: '#64748b' }}>of 8 codes</span>
                   </div>
                 </div>

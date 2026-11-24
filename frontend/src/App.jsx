@@ -144,7 +144,7 @@ export default function App() {
               path="company/documents"
               element={
                 <CompanyProtectedRoute>
-                  <CompanyAdminPortalPage defaultTab="documents" />
+                  <DocumentsPage isArchiveView={true} />
                 </CompanyProtectedRoute>
               }
             />

@@ -507,9 +507,10 @@ img {
 
 /* ── Page Content ────────────────────────────────────────── */
 .page-content {
-  padding: 2rem 2.25rem;
-  max-width: 1200px;
+  padding: 1.5rem 2rem;
+  max-width: 100%;
   width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Page Header ─────────────────────────────────────────── */
@@ -1192,20 +1193,20 @@ img {
 }
 
 .doc-table th {
-  padding: 0.5625rem 1.125rem;
+  padding: 0.5rem 0.75rem;
   text-align: left;
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .doc-table td {
-  padding: 0.875rem 1.125rem;
-  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78125rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
   vertical-align: middle;
