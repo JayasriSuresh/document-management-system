@@ -189,29 +189,6 @@ class MfaService:
             if company and company.mfa_required_for_all:
                 return True
 
-            # Multi-Branch Assignment Policy Check
-            from app.models import Branch, UserRoleAssignment
-            branch_ids = set()
-            if user.branch_id:
-                branch_ids.add(user.branch_id)
-
-            branch_assignments = db.query(UserRoleAssignment.scope_id).filter(
-                UserRoleAssignment.user_id == user.id,
-                UserRoleAssignment.scope_type == "branch",
-            ).all()
-            for (b_id,) in branch_assignments:
-                if b_id:
-                    branch_ids.add(int(b_id))
-
-            if branch_ids:
-                mandated_branch = db.query(Branch.id).filter(
-                    Branch.id.in_(branch_ids),
-                    Branch.company_id == user.company_id,
-                    Branch.mfa_required_for_all == True,
-                ).first()
-                if mandated_branch:
-                    return True
-
         return False
 
     @classmethod

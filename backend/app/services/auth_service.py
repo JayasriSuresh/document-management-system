@@ -104,7 +104,8 @@ class AuthService:
 
             # Check MFA status & platform mandatory policy
             from app.services.mfa_service import MfaService
-            if MfaService.is_mfa_enabled(db, "master_admin", admin.id):
+            _master_admin_mfa_enforced = MfaService.is_mfa_mandatory_for_master_admin(db, admin)
+            if _master_admin_mfa_enforced and MfaService.is_mfa_enabled(db, "master_admin", admin.id):
                 token_claims = {
                     "sub": admin.email,
                     "master_admin_id": admin.id,
@@ -255,7 +256,8 @@ class AuthService:
 
         # Check MFA status & company/platform mandatory policy
         from app.services.mfa_service import MfaService
-        if MfaService.is_mfa_enabled(db, "user", user.id):
+        _user_mfa_enforced = MfaService.is_mfa_mandatory_for_user(db, user)
+        if _user_mfa_enforced and MfaService.is_mfa_enabled(db, "user", user.id):
             token_claims = {
                 "sub": user.email,
                 "uid": user.id,

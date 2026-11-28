@@ -212,6 +212,7 @@ class CompanyAIModelRequestOut(BaseModel):
 
 class RequestDecisionIn(BaseModel):
     reason: Optional[str] = None
+    decision_notes: Optional[str] = None
     auto_assign: bool = True
 
 
@@ -893,7 +894,7 @@ def approve_company_model_request(
     admin_id = getattr(admin_ctx, "admin_id", None) or getattr(admin_ctx, "user_id", None)
     req_rec.status = "approved"
     req_rec.decision_by = admin_id
-    req_rec.decision_reason = payload.reason or "Approved by Master Admin."
+    req_rec.decision_reason = payload.reason or payload.decision_notes or "Approved by Master Admin."
     req_rec.decided_at = datetime.utcnow()
 
     # Automatically configure company assignment upon approval
@@ -959,7 +960,7 @@ def reject_company_model_request(
     admin_id = getattr(admin_ctx, "admin_id", None) or getattr(admin_ctx, "user_id", None)
     req_rec.status = "rejected"
     req_rec.decision_by = admin_id
-    req_rec.decision_reason = payload.reason or "Rejected by platform administrator."
+    req_rec.decision_reason = payload.reason or payload.decision_notes or "Rejected by platform administrator."
     req_rec.decided_at = datetime.utcnow()
 
     db.commit()
@@ -1004,16 +1005,48 @@ def get_master_admin_usage_overview(
         .first()
     )
 
-    # Provider breakdown
+    # Provider breakdown with success counting
     provider_breakdown = (
         db.query(
             AIProcessingLog.provider,
             func.count(AIProcessingLog.id).label("requests_count"),
-            func.sum(AIProcessingLog.cost_cents).label("cost_cents"),
+            func.sum(case((AIProcessingLog.success == True, 1), else_=0)).label("successful_requests"),
+            func.coalesce(func.sum(AIProcessingLog.cost_cents), 0).label("cost_cents"),
         )
         .group_by(AIProcessingLog.provider)
         .all()
     )
+
+    prov_dict = {
+        row.provider: {
+            "provider": row.provider,
+            "requests_count": row.requests_count,
+            "total_requests": row.requests_count,
+            "successful_requests": int(row.successful_requests or 0),
+            "cost_cents": int(row.cost_cents or 0),
+            "cost_usd": round((row.cost_cents or 0) / 100.0, 4),
+            "total_cost_usd": round((row.cost_cents or 0) / 100.0, 4),
+            "cost_inr": round(((row.cost_cents or 0) / 100.0) * rate, 2),
+        }
+        for row in provider_breakdown
+    }
+
+    # Ensure all registered foundation providers are visible in breakdown
+    plat_providers = db.query(PlatformAIProvider).all()
+    for pp in plat_providers:
+        if pp.provider_key not in prov_dict:
+            prov_dict[pp.provider_key] = {
+                "provider": pp.provider_key,
+                "requests_count": 0,
+                "total_requests": 0,
+                "successful_requests": 0,
+                "cost_cents": 0,
+                "cost_usd": 0.0,
+                "total_cost_usd": 0.0,
+                "cost_inr": 0.0,
+            }
+
+    providers_list = list(prov_dict.values())
 
     # Company breakdown
     company_breakdown = (
@@ -1030,7 +1063,23 @@ def get_master_admin_usage_overview(
         .all()
     )
 
-    total_cost_usd = round((agg.total_cost_cents or 0) / 100.0, 2)
+    comp_list = [
+        {
+            "company_id": row.id,
+            "company_name": row.name,
+            "spent_cents": int(row.spent_cents or 0),
+            "spent_usd": round((row.spent_cents or 0) / 100.0, 4),
+            "current_spend_usd": round((row.spent_cents or 0) / 100.0, 4),
+            "spent_inr": round(((row.spent_cents or 0) / 100.0) * rate, 2),
+            "budget_cents": row.monthly_ai_budget_cents or 2500,
+            "budget_usd": round((row.monthly_ai_budget_cents or 2500) / 100.0, 2),
+            "monthly_budget_dollars": round((row.monthly_ai_budget_cents or 2500) / 100.0, 2),
+            "request_count": row.request_count,
+        }
+        for row in company_breakdown
+    ]
+
+    total_cost_usd = round((agg.total_cost_cents or 0) / 100.0, 4)
     total_cost_inr = round(total_cost_usd * rate, 2)
 
     return {
@@ -1044,29 +1093,14 @@ def get_master_admin_usage_overview(
             "failed_attempts": int(agg.failed_attempts or 0),
             "exchange_rate": rate,
         },
-        "providers": [
-            {
-                "provider": row.provider,
-                "requests_count": row.requests_count,
-                "cost_cents": int(row.cost_cents or 0),
-                "cost_usd": round((row.cost_cents or 0) / 100.0, 2),
-                "cost_inr": round(((row.cost_cents or 0) / 100.0) * rate, 2),
-            }
-            for row in provider_breakdown
-        ],
-        "companies": [
-            {
-                "company_id": row.id,
-                "company_name": row.name,
-                "spent_cents": int(row.spent_cents or 0),
-                "spent_usd": round((row.spent_cents or 0) / 100.0, 2),
-                "spent_inr": round(((row.spent_cents or 0) / 100.0) * rate, 2),
-                "budget_cents": row.monthly_ai_budget_cents or 2500,
-                "budget_usd": round((row.monthly_ai_budget_cents or 2500) / 100.0, 2),
-                "request_count": row.request_count,
-            }
-            for row in company_breakdown
-        ],
+        "total_requests": int(agg.total_attempts or 0),
+        "total_cost_usd": total_cost_usd,
+        "total_cost_inr": total_cost_inr,
+        "failed_requests": int(agg.failed_attempts or 0),
+        "providers": providers_list,
+        "provider_breakdown": providers_list,
+        "companies": comp_list,
+        "company_breakdown": comp_list,
     }
 
 
@@ -1356,9 +1390,9 @@ def get_company_ai_settings(
         company_id=company_id,
         allowed_providers=allowed_providers,
         default_read_provider=comp_setting.default_read_provider if comp_setting else "gemini",
-        default_read_model=comp_setting.default_read_model if comp_setting else "gemini-2.0-flash",
+        default_read_model=comp_setting.default_read_model if comp_setting else "gemini-3.6-flash",
         default_generate_provider=comp_setting.default_generate_provider if comp_setting else "gemini",
-        default_generate_model=comp_setting.default_generate_model if comp_setting else "gemini-2.0-flash",
+        default_generate_model=comp_setting.default_generate_model if comp_setting else "gemini-3.6-flash",
         consents=consents_list,
         budget={
             "monthly_ai_budget_cents": company.monthly_ai_budget_cents or 5000,

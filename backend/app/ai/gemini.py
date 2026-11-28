@@ -22,7 +22,7 @@ logger = logging.getLogger("dms.ai.gemini")
 class GeminiProvider(AIProvider):
     """Google Gemini AI Provider."""
 
-    def __init__(self, api_key: str, default_model: str = "gemini-2.0-flash"):
+    def __init__(self, api_key: str, default_model: str = "gemini-3.6-flash"):
         self.api_key = api_key
         self.default_model = default_model
 
@@ -186,21 +186,36 @@ class GeminiProvider(AIProvider):
 
     def test_connection(self, api_key: str, model: str) -> Tuple[bool, str, int]:
         start = time.time()
-        try:
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            resp = client.models.generate_content(model=model, contents="Hello. Respond with OK.")
-            latency_ms = int((time.time() - start) * 1000)
-            if resp and resp.text:
-                return True, "Connection successful.", latency_ms
-            return False, "Empty response from Gemini API.", latency_ms
-        except Exception as e:
-            latency_ms = int((time.time() - start) * 1000)
-            err = str(e).lower()
-            if "503" in err or "temporar" in err or "high demand" in err:
-                return False, "Gemini API is temporarily experiencing high demand (503). Please retry in a few moments.", latency_ms
-            if "api key" in err or "401" in err or "403" in err:
-                return False, "Invalid API key.", latency_ms
-            if "not found" in err or "no longer available" in err or "not supported" in err:
-                return False, f"Model '{model}' is not available or not supported.", latency_ms
-            return False, f"Connection failed: {str(e)[:100]}", latency_ms
+        candidate_models = [model]
+        for fallback in ("gemini-3.6-flash", "gemini-flash-latest", "gemini-1.5-flash"):
+            if fallback not in candidate_models:
+                candidate_models.append(fallback)
+
+        last_error = ""
+        for target_model in candidate_models:
+            try:
+                from google import genai
+                client = genai.Client(api_key=api_key)
+                resp = client.models.generate_content(model=target_model, contents="Hello. Respond with OK.")
+                latency_ms = int((time.time() - start) * 1000)
+                if resp and resp.text:
+                    note = f" (via {target_model})" if target_model != model else ""
+                    return True, f"Connection successful{note}.", latency_ms
+            except Exception as e:
+                err = str(e).lower()
+                last_error = str(e)
+                if "api key" in err or "401" in err or "403" in err or "api_key_invalid" in err:
+                    latency_ms = int((time.time() - start) * 1000)
+                    return False, "Invalid API key.", latency_ms
+                if "404" in err or "not found" in err or "no longer available" in err or "not supported" in err:
+                    continue
+                if "503" in err or "high demand" in err or "temporar" in err:
+                    continue
+
+        latency_ms = int((time.time() - start) * 1000)
+        err_lower = last_error.lower()
+        if "503" in err_lower or "high demand" in err_lower or "temporar" in err_lower:
+            return False, "Gemini API is temporarily experiencing high demand. Please try again shortly.", latency_ms
+        if "no longer available" in err_lower or "not supported" in err_lower or "404" in err_lower:
+            return False, f"Model '{model}' is not supported or not available.", latency_ms
+        return False, f"Connection failed: {last_error[:120]}", latency_ms

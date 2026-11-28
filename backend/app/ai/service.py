@@ -216,13 +216,15 @@ class AIExecutionService:
         prompt: Optional[str] = None,
         document_id: Optional[int] = None,
         job_id: Optional[int] = None,
+        operation: Optional[str] = None,
     ) -> ExtractionResult:
         """
         Execute document extraction through the configured provider hierarchy.
         Supports automatic fallback, token tracking, budget settlement, and logging.
         """
+        op = operation or ("extraction" if schema else "ocr")
         # 1. Resolve configuration & credentials
-        config = resolve_ai_config(db, company_id=company_id, branch_id=branch_id, operation="read")
+        config = resolve_ai_config(db, company_id=company_id, branch_id=branch_id, operation=op)
 
         # 2. Check budget reservation
         cls._check_and_reserve_budget(db, company_id=company_id, estimated_cents=5)
@@ -260,7 +262,7 @@ class AIExecutionService:
                 branch_id=branch_id,
                 document_id=document_id,
                 job_id=job_id,
-                operation="read",
+                operation=op,
                 provider=result.provider,
                 model=result.model,
                 is_fallback=False,
@@ -287,7 +289,7 @@ class AIExecutionService:
             branch_id=branch_id,
             document_id=document_id,
             job_id=job_id,
-            operation="read",
+            operation=op,
             provider=primary_details.provider_key,
             model=primary_details.model,
             is_fallback=False,
@@ -328,7 +330,7 @@ class AIExecutionService:
                         branch_id=branch_id,
                         document_id=document_id,
                         job_id=job_id,
-                        operation="read",
+                        operation=op,
                         provider=fb_result.provider,
                         model=fb_result.model,
                         is_fallback=True,
@@ -350,7 +352,7 @@ class AIExecutionService:
                         branch_id=branch_id,
                         document_id=document_id,
                         job_id=job_id,
-                        operation="read",
+                        operation=op,
                         provider=fallback_details.provider_key,
                         model=fallback_details.model,
                         is_fallback=True,
@@ -371,7 +373,7 @@ class AIExecutionService:
                     branch_id=branch_id,
                     document_id=document_id,
                     job_id=job_id,
-                    operation="read",
+                    operation=op,
                     provider=fallback_details.provider_key,
                     model=fallback_details.model,
                     is_fallback=True,

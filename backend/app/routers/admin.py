@@ -1046,8 +1046,8 @@ DEFAULT_AI_PROVIDERS = {
     "gemini": {
         "enabled": True,
         "display_name": "Google Gemini",
-        "models": ["gemini-2.0-flash", "gemini-1.5-pro"],
-        "default_model": "gemini-2.0-flash",
+        "models": ["gemini-3.6-flash", "gemini-1.5-pro"],
+        "default_model": "gemini-3.6-flash",
     },
     "gpt": {
         "enabled": False,

@@ -195,19 +195,28 @@ export default function MasterAdminAIManagementView({ showToast }) {
   const handleTestConnection = async (providerKey, defaultModel) => {
     setTestingConn((prev) => ({ ...prev, [providerKey]: { loading: true, result: null } }));
     try {
-      const res = await api.testPlatformAIConnection(providerKey, defaultModel || 'gemini-2.0-flash');
-      setTestingConn((prev) => ({ ...prev, [providerKey]: { loading: false, result: res } }));
-      if (res.connected) {
-        if (showToast) showToast(`Connection to ${providerKey} successful (${res.latency_ms || 0}ms).`, 'success');
-      } else {
-        if (showToast) showToast(`Connection failed: ${res.error_message}`, 'error');
+      const targetModel = defaultModel || (providerKey === 'gemini' ? 'gemini-3.6-flash' : providerKey === 'openai' ? 'gpt-4o' : 'claude-3-5-sonnet-20241022');
+      const res = await api.testPlatformAIConnection(providerKey, targetModel);
+      const isSuccess = Boolean(res.success || res.connected);
+      const latency = res.latency_ms || 0;
+      const message = res.message || res.error_message || (isSuccess ? 'Live connection verified' : 'Handshake failed');
+
+      setTestingConn((prev) => ({
+        ...prev,
+        [providerKey]: {
+          loading: false,
+          result: { connected: isSuccess, success: isSuccess, error_message: message, message, latency_ms: latency },
+        },
+      }));
+      if (isSuccess && showToast) {
+        showToast(`Connection to ${providerKey} verified successfully (${latency}ms).`, 'success');
       }
     } catch (err) {
       setTestingConn((prev) => ({
         ...prev,
         [providerKey]: {
           loading: false,
-          result: { connected: false, error_message: err.message || 'Handshake failed' },
+          result: { connected: false, success: false, error_message: err.message || 'Handshake failed', message: err.message || 'Handshake failed', latency_ms: 0 },
         },
       }));
     }
@@ -333,7 +342,6 @@ export default function MasterAdminAIManagementView({ showToast }) {
     if (!selectedCompanyId) return;
     setAssignmentSaving(true);
     setError('');
-    setSuccess('');
     try {
       const assignmentsPayload = Object.entries(assignmentForm.assignments).map(([task, val]) => ({
         task_type: task,
@@ -347,9 +355,7 @@ export default function MasterAdminAIManagementView({ showToast }) {
         assignments: assignmentsPayload,
       });
 
-      setSuccess('Company AI assignments and budgets updated successfully.');
-      if (showToast) showToast('Company AI assignments saved.', 'success');
-      setTimeout(() => setSuccess(''), 4000);
+      if (showToast) showToast('Company AI configuration saved successfully.', 'success');
 
       // Refresh summaries
       const [sumRes, detRes] = await Promise.all([
@@ -360,6 +366,7 @@ export default function MasterAdminAIManagementView({ showToast }) {
       setSelectedCompanyDetail(detRes);
     } catch (err) {
       setError(err.message || 'Failed to save assignments.');
+      if (showToast) showToast(err.message || 'Failed to save assignments.', 'error');
     } finally {
       setAssignmentSaving(false);
     }
@@ -437,75 +444,140 @@ export default function MasterAdminAIManagementView({ showToast }) {
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          gap: '8px',
           flexWrap: 'wrap',
-          gap: '12px',
           backgroundColor: '#ffffff',
-          padding: '12px 20px',
+          padding: '10px 14px',
           borderRadius: '12px',
           border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#eff6ff',
-              color: '#2563eb',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
-              <path d="M18 14v4a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-4" />
-              <line x1="12" y1="12" x2="12" y2="18" />
-              <circle cx="12" cy="15" r="1" />
-            </svg>
-          </div>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-              Centralized AI Infrastructure &amp; Governance
-            </h2>
-            <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-              Master Admin portal controls provider keys, model catalogues, company assignments, and approval workflows.
-            </p>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '6px', backgroundColor: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
-          {[
-            { id: 'providers', label: 'AI Providers & Keys' },
-            { id: 'models', label: 'Model Catalogue' },
-            { id: 'assignments', label: 'Company Assignments' },
-            { id: 'requests', label: `Model Requests ${aiRequests.filter((r) => r.status === 'pending').length > 0 ? `(${aiRequests.filter((r) => r.status === 'pending').length})` : ''}` },
-            { id: 'usage', label: 'Usage & Budgets' },
-          ].map((tab) => (
+        {[
+          {
+            id: 'providers',
+            label: 'AI Providers & Keys',
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            ),
+          },
+          {
+            id: 'models',
+            label: 'Model Catalogue',
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="4" y="4" width="16" height="16" rx="2" />
+                <rect x="9" y="9" width="6" height="6" />
+                <line x1="9" y1="1" x2="9" y2="4" />
+                <line x1="15" y1="1" x2="15" y2="4" />
+                <line x1="9" y1="20" x2="9" y2="23" />
+                <line x1="15" y1="20" x2="15" y2="23" />
+                <line x1="20" y1="9" x2="23" y2="9" />
+                <line x1="20" y1="14" x2="23" y2="14" />
+                <line x1="1" y1="9" x2="4" y2="9" />
+                <line x1="1" y1="14" x2="4" y2="14" />
+              </svg>
+            ),
+          },
+          {
+            id: 'assignments',
+            label: 'Company Assignments',
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 21h18" />
+                <path d="M5 21V7l8-4v18" />
+                <path d="M19 21V11l-6-4" />
+                <path d="M9 9v.01" />
+                <path d="M9 12v.01" />
+                <path d="M9 15v.01" />
+                <path d="M9 18v.01" />
+              </svg>
+            ),
+          },
+          {
+            id: 'requests',
+            label: 'Model Requests',
+            badge: aiRequests.filter((r) => r.status === 'pending').length,
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            ),
+          },
+          {
+            id: 'usage',
+            label: 'Usage & Budgets',
+            icon: (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+              </svg>
+            ),
+          },
+        ].map((tab) => {
+          const isActive = activeSubTab === tab.id;
+          return (
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id)}
               style={{
-                border: 'none',
-                background: activeSubTab === tab.id ? '#ffffff' : 'transparent',
-                color: activeSubTab === tab.id ? '#1e293b' : '#64748b',
-                fontWeight: activeSubTab === tab.id ? 600 : 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                border: isActive ? '1.5px solid #dc2626' : '1px solid #e2e8f0',
+                backgroundColor: isActive ? '#fef2f2' : '#ffffff',
+                color: isActive ? '#dc2626' : '#475569',
+                fontWeight: isActive ? 700 : 600,
                 fontSize: '13px',
-                padding: '6px 14px',
-                borderRadius: '6px',
                 cursor: 'pointer',
-                boxShadow: activeSubTab === tab.id ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                boxShadow: isActive ? '0 2px 4px rgba(220, 38, 38, 0.12)' : '0 1px 2px rgba(0, 0, 0, 0.02)',
                 transition: 'all 0.15s ease',
               }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                  e.currentTarget.style.color = '#0f172a';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                  e.currentTarget.style.color = '#475569';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }
+              }}
             >
-              {tab.label}
+              <span style={{ color: isActive ? '#dc2626' : '#64748b', display: 'flex', alignItems: 'center' }}>
+                {tab.icon}
+              </span>
+              <span>{tab.label}</span>
+              {tab.badge > 0 && (
+                <span
+                  style={{
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    backgroundColor: isActive ? '#dc2626' : '#fee2e2',
+                    color: isActive ? '#ffffff' : '#dc2626',
+                  }}
+                >
+                  {tab.badge}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Notifications */}
@@ -554,9 +626,6 @@ export default function MasterAdminAIManagementView({ showToast }) {
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
                 Platform Foundation AI Providers
               </h3>
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                Manage API credentials (encrypted at rest), connection health, and global availability.
-              </p>
             </div>
             <button
               onClick={() => setShowAddProviderModal(true)}
@@ -643,37 +712,67 @@ export default function MasterAdminAIManagementView({ showToast }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ fontWeight: 600, color: '#475569' }}>API Key (Encrypted at rest):</span>
                         {cred ? (
-                          <span style={{ color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ color: '#166534', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', backgroundColor: '#dcfce7', padding: '2px 7px', borderRadius: '4px' }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                            Configured
+                            Encrypted &amp; Active
                           </span>
                         ) : (
-                          <span style={{ color: '#b45309', fontWeight: 600 }}>Using Platform .env / None</span>
+                          <span style={{ color: '#64748b', fontWeight: 500, fontSize: '11px', backgroundColor: '#f1f5f9', padding: '2px 7px', borderRadius: '4px' }}>
+                            Not Configured
+                          </span>
                         )}
                       </div>
                       <div style={{ fontFamily: 'monospace', color: cred ? '#0f172a' : '#94a3b8', fontSize: '12px' }}>
-                        {cred?.masked_key || 'No custom credential stored'}
+                        {cred ? (
+                          <span>{cred.masked_key} <span style={{ fontFamily: 'sans-serif', fontSize: '10.5px', color: '#64748b', fontWeight: 'normal' }}>(Stored in DB)</span></span>
+                        ) : (
+                          'No key stored. Click "Add API Key" below.'
+                        )}
                       </div>
                     </div>
 
-                    {/* Connection Test Result */}
+                    {/* Connection Test Result (Inline contextual feedback) */}
                     {testState && (
                       <div
                         style={{
                           fontSize: '12px',
-                          padding: '8px 10px',
+                          padding: '7px 10px',
                           borderRadius: '6px',
                           marginBottom: '10px',
-                          backgroundColor: testState.loading ? '#eff6ff' : testState.result?.connected ? '#f0fdf4' : '#fef2f2',
-                          color: testState.loading ? '#1d4ed8' : testState.result?.connected ? '#15803d' : '#b91c1c',
-                          border: `1px solid ${testState.loading ? '#bfdbfe' : testState.result?.connected ? '#bbf7d0' : '#fecaca'}`,
+                          backgroundColor: testState.loading ? '#eff6ff' : (testState.result?.connected || testState.result?.success) ? '#f0fdf4' : '#fef2f2',
+                          color: testState.loading ? '#1d4ed8' : (testState.result?.connected || testState.result?.success) ? '#15803d' : '#b91c1c',
+                          border: `1px solid ${testState.loading ? '#bfdbfe' : (testState.result?.connected || testState.result?.success) ? '#bbf7d0' : '#fecaca'}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
                         }}
                       >
-                        {testState.loading
-                          ? 'Performing live handshake...'
-                          : testState.result?.connected
-                          ? `✓ Live connection verified (${testState.result.latency_ms || 0}ms)`
-                          : `✕ Failed: ${testState.result?.error_message || 'Handshake failed'}`}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {testState.loading ? (
+                            <span>Checking live handshake...</span>
+                          ) : (testState.result?.connected || testState.result?.success) ? (
+                            <>
+                              <span style={{ fontWeight: 700 }}>✓</span>
+                              <span>Live connection verified ({testState.result.latency_ms || 0}ms) — {testState.result.message || 'OK'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ fontWeight: 700 }}>✕</span>
+                              <span>{testState.result?.message || testState.result?.error_message || 'Connection failed'}</span>
+                            </>
+                          )}
+                        </div>
+                        {!testState.loading && (
+                          <button
+                            type="button"
+                            onClick={() => setTestingConn(prev => { const n = { ...prev }; delete n[p.provider_key]; return n; })}
+                            style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '14px', fontWeight: 700, padding: '0 4px', lineHeight: 1 }}
+                            title="Dismiss alert"
+                          >
+                            ×
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -746,9 +845,6 @@ export default function MasterAdminAIManagementView({ showToast }) {
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
                 Foundation AI Model Catalogue
               </h3>
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                Define models accessible to companies, configure capability matrices (OCR, extraction, generation), and toggle platform availability.
-              </p>
             </div>
             <button
               onClick={handleOpenAddModel}
@@ -895,12 +991,9 @@ export default function MasterAdminAIManagementView({ showToast }) {
             }}
           >
             <div>
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
                 Select Enterprise Company
               </h3>
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                Configure exclusive AI task-to-model assignments and enforce monthly usage quotas.
-              </p>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1011,7 +1104,7 @@ export default function MasterAdminAIManagementView({ showToast }) {
                       { key: 'extraction', title: 'Structured Invoice Data Extraction', desc: 'Extracts invoice lines, vendor details, tax amounts, and totals.' },
                       { key: 'generation', title: 'Invoice Generation & Line Drafting', desc: 'Drafts items, tax descriptions, and customer communications.' },
                     ].map((task) => {
-                      const currentAssign = assignmentForm.assignments[task.key] || { provider_key: 'gemini', model_id: 'gemini-2.0-flash' };
+                      const currentAssign = assignmentForm.assignments[task.key] || { provider_key: 'gemini', model_id: 'gemini-3.6-flash' };
                       const compatibleModels = catalogueModels.filter((m) => m.capabilities?.includes(task.key) && m.is_active);
 
                       return (
@@ -1069,7 +1162,7 @@ export default function MasterAdminAIManagementView({ showToast }) {
                                 </option>
                               ))}
                               {compatibleModels.length === 0 && (
-                                <option value="gemini::gemini-2.0-flash">Gemini 2.0 Flash (Default)</option>
+                                <option value="gemini::gemini-3.6-flash">Gemini 3.6 Flash (Default)</option>
                               )}
                             </select>
                           </div>
@@ -1091,10 +1184,20 @@ export default function MasterAdminAIManagementView({ showToast }) {
                       fontSize: '13px',
                       fontWeight: 600,
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: assignmentSaving ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    {assignmentSaving ? 'Saving Assignments...' : 'Save Company AI Configuration'}
+                    {assignmentSaving ? (
+                      <>
+                        <div className="spinner" style={{ width: '14px', height: '14px', borderTopColor: '#ffffff' }} />
+                        Saving Assignments...
+                      </>
+                    ) : (
+                      'Save Company AI Configuration'
+                    )}
                   </button>
                 </div>
               </div>
@@ -1202,9 +1305,6 @@ export default function MasterAdminAIManagementView({ showToast }) {
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
                 Company AI Model Access Requests
               </h3>
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                Review requests submitted by Company Admins for model access. Approving automatically assigns the model to the target company.
-              </p>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -1358,29 +1458,37 @@ export default function MasterAdminAIManagementView({ showToast }) {
       )}
 
       {/* ── SUB-TAB 5: USAGE & BUDGETS OVERVIEW ────────────────────────────── */}
-      {activeSubTab === 'usage' && (
+      {/* ── SUB-TAB 5: USAGE & BUDGETS OVERVIEW ────────────────────────────── */}
+      {activeSubTab === 'usage' && (() => {
+        const totalRequests = usageOverview?.total_requests ?? usageOverview?.platform_totals?.total_attempts ?? 0;
+        const totalCostUsd = usageOverview?.total_cost_usd ?? usageOverview?.platform_totals?.total_cost_usd ?? 0;
+        const failedRequests = usageOverview?.failed_requests ?? usageOverview?.platform_totals?.failed_attempts ?? 0;
+        const providerList = usageOverview?.provider_breakdown || usageOverview?.providers || [];
+        const companyList = usageOverview?.company_breakdown || usageOverview?.companies || [];
+
+        return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Top Metrics Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px 14px' }}>
               <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total AI Requests</div>
               <div style={{ fontSize: '20px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-                {(usageOverview?.total_requests || 0).toLocaleString()}
+                {totalRequests.toLocaleString()}
               </div>
             </div>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px 14px' }}>
               <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Platform AI Cost</div>
               <div style={{ fontSize: '20px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
-                ${(usageOverview?.total_cost_usd || 0).toFixed(4)}
+                ${totalCostUsd.toFixed(4)}
               </div>
               <div style={{ fontSize: '11px', color: '#64748b' }}>
-                ~₹{((usageOverview?.total_cost_usd || 0) * INR_RATE).toFixed(2)} INR
+                ~₹{(totalCostUsd * INR_RATE).toFixed(2)} INR
               </div>
             </div>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px 14px' }}>
               <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Failed Requests</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: usageOverview?.failed_requests > 0 ? '#dc2626' : '#0f172a', marginTop: '2px' }}>
-                {(usageOverview?.failed_requests || 0).toLocaleString()}
+              <div style={{ fontSize: '20px', fontWeight: 700, color: failedRequests > 0 ? '#dc2626' : '#0f172a', marginTop: '2px' }}>
+                {failedRequests.toLocaleString()}
               </div>
             </div>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '12px 14px' }}>
@@ -1416,27 +1524,40 @@ export default function MasterAdminAIManagementView({ showToast }) {
                 </tr>
               </thead>
               <tbody>
-                {(usageOverview?.provider_breakdown || []).map((p) => {
-                  const rate = p.total_requests > 0 ? ((p.successful_requests / p.total_requests) * 100).toFixed(1) : '100.0';
-                  return (
-                    <tr key={p.provider} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px 16px', fontWeight: 700, color: '#1e293b', textTransform: 'uppercase' }}>
-                        {p.provider}
-                      </td>
-                      <td style={{ padding: '10px 16px', color: '#0f172a' }}>
-                        {p.total_requests}
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <span style={{ fontWeight: 600, color: Number(rate) < 95 ? '#dc2626' : '#16a34a' }}>
-                          {rate}%
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#334155' }}>
-                        ${p.total_cost_usd?.toFixed(4) || '0.0000'} (~₹{((p.total_cost_usd || 0) * INR_RATE).toFixed(2)})
-                      </td>
-                    </tr>
-                  );
-                })}
+                {providerList.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      No AI requests recorded yet across foundation providers.
+                    </td>
+                  </tr>
+                ) : (
+                  providerList.map((p) => {
+                    const reqCount = p.total_requests ?? p.requests_count ?? 0;
+                    const successCount = p.successful_requests ?? reqCount;
+                    const rate = reqCount > 0 ? ((successCount / reqCount) * 100).toFixed(1) : '100.0';
+                    const costVal = p.total_cost_usd ?? p.cost_usd ?? ((p.cost_cents || 0) / 100);
+                    const providerLabel = p.provider === 'gemini' ? 'Google Gemini' : p.provider === 'openai' ? 'OpenAI GPT' : p.provider === 'anthropic' ? 'Anthropic Claude' : (p.provider || '').toUpperCase();
+
+                    return (
+                      <tr key={p.provider} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 16px', fontWeight: 700, color: '#1e293b' }}>
+                          {providerLabel} <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>({p.provider})</span>
+                        </td>
+                        <td style={{ padding: '10px 16px', color: '#0f172a' }}>
+                          {reqCount}
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ fontWeight: 600, color: Number(rate) < 95 && reqCount > 0 ? '#dc2626' : '#16a34a' }}>
+                            {rate}%
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: '#334155' }}>
+                          ${costVal.toFixed(4)} (~₹{(costVal * INR_RATE).toFixed(2)})
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -1467,58 +1588,68 @@ export default function MasterAdminAIManagementView({ showToast }) {
                 </tr>
               </thead>
               <tbody>
-                {(usageOverview?.company_breakdown || []).map((c) => {
-                  const budget = c.monthly_budget_dollars || 25;
-                  const pct = budget > 0 ? Math.min(100, Math.round(((c.current_spend_usd || 0) / budget) * 100)) : 0;
-                  const isOver = (c.current_spend_usd || 0) >= budget;
+                {companyList.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>
+                      No enterprise companies recorded.
+                    </td>
+                  </tr>
+                ) : (
+                  companyList.map((c) => {
+                    const budget = c.monthly_budget_dollars ?? c.budget_usd ?? ((c.budget_cents || 0) / 100) ?? 25;
+                    const currentSpend = c.current_spend_usd ?? c.spent_usd ?? ((c.spent_cents || 0) / 100) ?? 0;
+                    const pct = budget > 0 ? Math.min(100, Math.round((currentSpend / budget) * 100)) : 0;
+                    const isOver = currentSpend >= budget;
 
-                  return (
-                    <tr key={c.company_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1e293b' }}>
-                        {c.company_name}
-                      </td>
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: '#0f172a' }}>
-                        ${(c.current_spend_usd || 0).toFixed(4)} (~₹{((c.current_spend_usd || 0) * INR_RATE).toFixed(2)})
-                      </td>
-                      <td style={{ padding: '10px 16px', color: '#475569' }}>
-                        ${budget} (~₹{(budget * INR_RATE).toLocaleString('en-IN')})
-                      </td>
-                      <td style={{ padding: '10px 16px', minWidth: '160px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div
-                              style={{
-                                width: `${pct}%`,
-                                height: '100%',
-                                backgroundColor: isOver ? '#dc2626' : pct > 80 ? '#f59e0b' : '#2563eb',
-                              }}
-                            />
+                    return (
+                      <tr key={c.company_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: '#1e293b' }}>
+                          {c.company_name}
+                        </td>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: '#0f172a' }}>
+                          ${currentSpend.toFixed(4)} (~₹{(currentSpend * INR_RATE).toFixed(2)})
+                        </td>
+                        <td style={{ padding: '10px 16px', color: '#475569' }}>
+                          ${budget} (~₹{(budget * INR_RATE).toLocaleString('en-IN')})
+                        </td>
+                        <td style={{ padding: '10px 16px', minWidth: '160px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ flex: 1, height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  width: `${pct}%`,
+                                  height: '100%',
+                                  backgroundColor: isOver ? '#dc2626' : pct > 80 ? '#f59e0b' : '#2563eb',
+                                }}
+                              />
+                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', width: '32px' }}>{pct}%</span>
                           </div>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', width: '32px' }}>{pct}%</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <span
-                          style={{
-                            fontSize: '10px',
-                            fontWeight: 700,
-                            padding: '2px 6px',
-                            borderRadius: '10px',
-                            backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
-                            color: isOver ? '#991b1b' : '#166534',
-                          }}
-                        >
-                          {isOver ? 'BUDGET EXCEEDED' : 'NORMAL'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '2px 6px',
+                              borderRadius: '10px',
+                              backgroundColor: isOver ? '#fee2e2' : '#dcfce7',
+                              color: isOver ? '#991b1b' : '#166534',
+                            }}
+                          >
+                            {isOver ? 'BUDGET EXCEEDED' : 'NORMAL'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── MODAL: ADD / EDIT CREDENTIAL ───────────────────────────────────── */}
       {showCredModal && (

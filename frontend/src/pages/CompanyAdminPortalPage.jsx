@@ -5,7 +5,6 @@ import { api } from '../api';
 import ConfirmModal from '../components/ConfirmModal';
 import MfaModal from '../components/MfaModal';
 import CompanyAIProvidersView from '../components/CompanyAIProvidersView';
-import BranchAIConfigModal from '../components/BranchAIConfigModal';
 import TemplateManagementView from '../components/TemplateManagementView';
 import CompanyAIUsageReportView from '../components/CompanyAIUsageReportView';
 import CompanyJobsView from '../components/CompanyJobsView';
@@ -1882,9 +1881,6 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
   // View Details Modal
   const [viewBranch, setViewBranch] = useState(null);
 
-  // AI Configuration Modal
-  const [aiConfigBranch, setAiConfigBranch] = useState(null);
-
   // Action loading state
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
@@ -2233,25 +2229,6 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
                         style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', fontSize: '12px', fontWeight: 500, cursor: 'pointer' }}
                       >
                         Edit
-                      </button>
-                      <button
-                        onClick={() => setAiConfigBranch(b)}
-                        style={{
-                          padding: '5px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #c084fc',
-                          backgroundColor: '#faf5ff',
-                          color: '#7e22ce',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                        AI Config
                       </button>
                       <button
                         onClick={() => handleToggleStatus(b)}
@@ -2703,15 +2680,6 @@ function BranchManagementView({ showToast, onBranchesChanged }) {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Branch AI Config Modal */}
-      {aiConfigBranch && (
-        <BranchAIConfigModal
-          branch={aiConfigBranch}
-          onClose={() => setAiConfigBranch(null)}
-          showToast={showToast}
-        />
       )}
     </div>
   );
@@ -4072,38 +4040,7 @@ function CompanySecurityView({ showToast }) {
         </div>
       </div>
 
-      {/* Branch MFA Delegation Policy Card */}
-      <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
-              Branch MFA Policy Delegation
-            </h3>
-            <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b', lineHeight: '1.4' }}>
-              Allow assigned Branch Administrators to mandate and configure MFA policies independently for their branches.
-            </p>
-          </div>
 
-          <button
-            onClick={handleToggleDelegation}
-            disabled={updatingPolicy}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: policy?.allow_branch_mfa_control ? '#2563eb' : '#cbd5e1',
-              color: '#ffffff',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              cursor: updatingPolicy ? 'not-allowed' : 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'background 0.2s',
-            }}
-          >
-            {updatingPolicy ? 'Updating...' : (policy?.allow_branch_mfa_control ? 'DELEGATED' : 'DISABLED')}
-          </button>
-        </div>
-      </div>
 
       {/* Personal MFA Setup for this Company Admin */}
       <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
@@ -4125,20 +4062,20 @@ function CompanySecurityView({ showToast }) {
         }}>
           <div>
             <div style={{ fontWeight: 600, fontSize: '12.5px', color: '#1e293b' }}>
-              Status: {mfaStatus?.mfa_enabled ? (
+              Status: {(mfaStatus?.enabled || mfaStatus?.mfa_enabled) ? (
                 <span style={{ color: '#15803d' }}>Enabled &amp; Verified</span>
               ) : (
                 <span style={{ color: '#64748b' }}>Not Configured</span>
               )}
             </div>
             <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
-              {mfaStatus?.mfa_enabled
+              {(mfaStatus?.enabled || mfaStatus?.mfa_enabled)
                 ? 'Your administrator login is protected with 2FA.'
                 : 'Add extra protection against credential compromise.'}
             </div>
           </div>
 
-          {!mfaStatus?.mfa_enabled ? (
+          {!(mfaStatus?.enabled || mfaStatus?.mfa_enabled) ? (
             <button
               onClick={() => setShowEnrollModal(true)}
               style={{
@@ -4156,9 +4093,16 @@ function CompanySecurityView({ showToast }) {
               Set Up Authenticator App
             </button>
           ) : (
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 8px', borderRadius: '10px' }}>
-              ACTIVE
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {mfaStatus?.remaining_recovery_codes !== undefined && (
+                <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                  {mfaStatus.remaining_recovery_codes} of 8 recovery codes left
+                </span>
+              )}
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', backgroundColor: '#ecfdf5', padding: '3px 8px', borderRadius: '10px' }}>
+                ACTIVE
+              </span>
+            </div>
           )}
         </div>
       </div>

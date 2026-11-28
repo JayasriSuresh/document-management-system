@@ -90,9 +90,9 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
 
 
 def run_ocr(document_id: int, file_path: str, mime_type: str):
-    """Background task: runs Gemini Flash OCR via Google Cloud API and updates DB."""
-    import os
+    """Background task: runs dynamic multi-provider AI OCR & extraction via AIExecutionService."""
     from app.database import SessionLocal
+    from app.ai.service import AIExecutionService
 
     db = SessionLocal()
     try:
@@ -100,243 +100,53 @@ def run_ocr(document_id: int, file_path: str, mime_type: str):
         if not doc:
             return
 
-        # 1. Check platform AI provider availability
-        s_providers = db.query(PlatformSetting).filter(PlatformSetting.key == "ai_providers").first()
-        providers_cfg = s_providers.value if s_providers and isinstance(s_providers.value, dict) else {}
-        gemini_cfg = providers_cfg.get("gemini", {"enabled": True})
-        if not gemini_cfg.get("enabled", True):
-            doc.ocr_status = OcrStatus.FAILED
-            doc.ocr_text = "[AI provider 'gemini' is disabled platform-wide]"
-            db.commit()
-            return
-
-        # 2. Check company AI monthly budget
-        start_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        spent_cents = (
-            db.query(func.coalesce(func.sum(AIUsageLedger.cost_cents), 0))
-            .filter(
-                AIUsageLedger.company_id == doc.company_id,
-                AIUsageLedger.created_at >= start_of_month,
-                AIUsageLedger.status == "success",
-            )
-            .scalar()
-            or 0
-        )
-        company = db.query(Company).filter(Company.id == doc.company_id).first()
-        if company and spent_cents >= company.monthly_ai_budget_cents:
-            doc.ocr_status = OcrStatus.FAILED
-            doc.ocr_text = "[Monthly AI budget exceeded for this company]"
-            rate = get_usd_to_inr_rate(db)
-            db.add(AIUsageLedger(
-                company_id=doc.company_id,
-                branch_id=doc.branch_id,
-                provider="gemini",
-                model=gemini_cfg.get("default_model", "gemini-2.0-flash"),
-                operation="ocr",
-                cost_cents=0,
-                cost_inr=0.0,
-                exchange_rate=rate,
-                converted_at=datetime.utcnow(),
-                currency="INR",
-                status="budget_exceeded",
-            ))
-            db.commit()
-            return
-
         doc.ocr_status = OcrStatus.PROCESSING
         db.commit()
 
-        try:
-            from app.config import settings
-            gemini_key = settings.GEMINI_API_KEY
-            if not gemini_key:
-                raise ValueError("Missing GEMINI_API_KEY in .env file.")
-            
-            from google import genai
-            
-            client = genai.Client(api_key=gemini_key)
-
-            # For PDF, we just grab the first page
-            target_file_path = file_path
-            if mime_type == "application/pdf":
+        # Read file bytes
+        target_bytes = None
+        target_mime = mime_type
+        if mime_type == "application/pdf":
+            try:
                 from pdf2image import convert_from_path
-                import tempfile
+                import io
                 images = convert_from_path(file_path, dpi=200)
                 if images:
-                    temp_img_path = tempfile.mktemp(suffix=".jpg")
-                    images[0].save(temp_img_path, format="JPEG")
-                    target_file_path = temp_img_path
-                    mime_type = "image/jpeg"
+                    buf = io.BytesIO()
+                    images[0].save(buf, format="JPEG")
+                    target_bytes = buf.getvalue()
+                    target_mime = "image/jpeg"
+            except Exception as pdf_err:
+                logger.warning(f"Could not convert PDF to image for OCR: {pdf_err}")
+                with open(file_path, "rb") as f:
+                    target_bytes = f.read()
+        else:
+            with open(file_path, "rb") as f:
+                target_bytes = f.read()
 
-            from PIL import Image
-            img = Image.open(target_file_path)
-
-            prompt = "Extract all the text from this receipt. Do NOT output any markdown formatting, do NOT output '```', and completely ignore and exclude any noisy artifacts like dashed lines (e.g. '----'), repeated symbols (e.g. '===='), or squiggly lines. Just output the clean text exactly as it appears."
-
-            import time
-            max_retries = 3
-            response = None
-            
-            for attempt in range(max_retries):
-                try:
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=[
-                            img,
-                            prompt
-                        ]
-                    )
-                    break # Success!
-                except Exception as api_e:
-                    # If it's a 429 Resource Exhausted or 503 error, wait and retry
-                    if ("429" in str(api_e) or "503" in str(api_e)) and attempt < max_retries - 1:
-                        time.sleep(4)
-                        continue
-                    raise api_e
-
-            ocr_text = response.text.strip() if response else "[No text detected]"
-            doc.ocr_text = ocr_text if ocr_text else "[No text detected]"
-
-            # --- Hybrid Extraction (Layer 1: Local, Layer 2: Gemini Fallback) ---
-            import json
-            import re
-            from rapidfuzz import process, fuzz
-            
-            t = doc.ocr_text or ""
-            
-            FIELD_ALIASES = {
-                "bill_no": ["invoice number", "invoice no", "invoice #", "inv no", "inv #", "bill number", "bill no", "bill #", "tax invoice no", "billno"],
-                "gst_reg_no": ["gst number", "gst no", "gstin", "gstin no", "gst identification number", "tax registration number", "gst reg no"],
-                "date": ["invoice date", "invoice dt", "bill date", "date of invoice", "tax invoice date", "date"],
-                "total_amount": ["grand total", "invoice total", "total amount", "net amount", "amount payable", "total payable", "total value", "total"]
-            }
-
-            def fuzzy_extract(field_key):
-                aliases = FIELD_ALIASES.get(field_key, [])
-                best_score = 0
-                extracted_val = ""
-                for line in t.split('\n'):
-                    parts = re.split(r':|\s{2,}', line, maxsplit=1)
-                    if len(parts) >= 2:
-                        label = parts[0].strip().lower()
-                        val = parts[1].strip()
-                        
-                        match = process.extractOne(label, aliases, scorer=fuzz.ratio)
-                        if match and match[1] > best_score:
-                            best_score = match[1]
-                            extracted_val = val
-                return extracted_val if best_score >= 80 else ""
-
-            # Layer 1: Fuzzy Matching & Aliases
-            local_gst = fuzzy_extract("gst_reg_no")
-            local_date = fuzzy_extract("date")
-            local_bill = fuzzy_extract("bill_no")
-            local_total = fuzzy_extract("total_amount")
-
-            # Layer 1b: Exact Regex (if fuzzy missed it because of formatting)
-            def exact_extract(pattern, text):
-                m = re.search(pattern, text, re.IGNORECASE)
-                return m.group(1).strip() if m else ""
-
-            if not local_gst: local_gst = exact_extract(r'(?:Gst Reg No|GSTIN|GST No)[:\s]*([A-Z0-9]+)', t)
-            if not local_date: local_date = exact_extract(r'(?:Date|Bill Date)[:\s]*([\d]{2}/[\d]{2}/[\d]{4})', t)
-            if not local_bill: local_bill = exact_extract(r'(?:Billno|Bill No|Invoice No)[:\s]*([a-zA-Z0-9-]+)', t)
-            if not local_total: local_total = exact_extract(r'(?:Total Value|Total Amount|Grand Total)[:\s]*([\d.,]+)', t)
-
-            # Confidence check: if we got the basic fields, we trust the local extraction
-            if local_gst and local_bill and local_total:
-                branch = exact_extract(r'(?:Branch)[:\s]*(.*?)(?:\n|$)', t)
-                customer = exact_extract(r'(?:Customer Name|Billed To)[:\s]*(.*?)(?:\n|$)', t)
-                contact = exact_extract(r'(?:Contact Number|Phone)[:\s]*([\d]+)', t)
-                
-                b_match = re.search(r'(?:Billing Address)[:\s]*(.*?)(?:Delivery Address|$)', t, re.IGNORECASE | re.DOTALL)
-                billing = b_match.group(1).strip().replace('\n', ' ') if b_match else ""
-                
-                d_match = re.search(r'(?:Delivery Address)[:\s]*(.*?)(?:SLNO|Description|$)', t, re.IGNORECASE | re.DOTALL)
-                delivery = d_match.group(1).strip().replace('\n', ' ') if d_match else ""
-
-                items = []
-                for line in t.split('\n'):
-                    if re.match(r'^\s*\d+\s+[A-Za-z]', line):
-                        parts = re.split(r'\s{2,}|\t', line.strip())
-                        if len(parts) >= 3:
-                            items.append({
-                                "sl_no": parts[0].split()[0],
-                                "description": " ".join(parts[0].split()[1:] + [parts[1] if len(parts)>1 else ""]),
-                                "hsn_code": parts[2] if len(parts) > 2 else "",
-                                "qty": "1",
-                                "unit_price": parts[-2] if len(parts) >= 5 else "",
-                                "total": parts[-1] if len(parts) >= 4 else "",
-                                "gst": "18",
-                                "central_tax": "",
-                                "state_tax": "",
-                                "integrate": "",
-                                "total_value": parts[-1] if len(parts) >= 4 else ""
-                            })
-                
-                doc.structured_data = json.dumps({
-                    "gst_reg_no": local_gst,
-                    "date": local_date,
-                    "bill_no": local_bill,
-                    "branch": branch,
-                    "customer_name": customer,
-                    "contact_number": contact,
-                    "billing_address": billing,
-                    "delivery_address": delivery,
-                    "items": items,
-                    "total_amount_words": exact_extract(r'(?:Rupees)\s*(.*?)(?:\n|$)', t),
-                    "total_amount": local_total
-                })
-            else:
-                # Fallback to Gemini
-                try:
-                    p = f"""
-                    You are an advanced invoice extraction AI. 
-                    Extract the following standardized fields from the invoice text below. The invoice may come from any company and use variations in terminology.
-                    Map whatever wording they use to these exact JSON keys. If a field is missing, leave it blank (empty string).
-                    Fields: gst_reg_no, date, bill_no, branch, customer_name, contact_number, billing_address, delivery_address, items (list of objects with: sl_no, description, hsn_code, qty, unit_price, total, gst, central_tax, state_tax, integrate, total_value), total_amount_words, total_amount.
-                    Return ONLY valid JSON.
-                    Text:
-                    {t}
-                    """
-                    extraction_resp = client.models.generate_content(model='gemini-3.6-flash', contents=p)
-                    json_str = extraction_resp.text
-                    match = re.search(r'```(?:json)?\n(.*?)\n```', json_str, re.DOTALL)
-                    if match: json_str = match.group(1)
-                    # test parse
-                    json.loads(json_str) 
-                    doc.structured_data = json_str
-                except Exception as ex:
-                    # if fallback fails, store empty JSON object
-                    doc.structured_data = "{}"
-
-            doc.ocr_status = OcrStatus.COMPLETED
-            # Record AI usage in ledger
-            cost_cents = 1
-            rate = get_usd_to_inr_rate(db)
-            cost_inr = convert_usd_cents_to_inr(cost_cents, rate)
-            db.add(AIUsageLedger(
-                company_id=doc.company_id,
-                branch_id=doc.branch_id,
-                provider="gemini",
-                model="gemini-2.0-flash",
-                operation="ocr_extraction",
-                tokens_in=150,
-                tokens_out=80,
-                cost_cents=cost_cents,
-                cost_inr=cost_inr,
-                exchange_rate=rate,
-                converted_at=datetime.utcnow(),
-                currency="INR",
-                status="success",
-            ))
-            if company:
-                company.ai_budget_spent_cents = int(spent_cents + cost_cents)
-                company.ai_budget_spent_inr = round(float(company.ai_budget_spent_inr or 0.0) + cost_inr, 4)
-        except Exception as e:
+        if not target_bytes:
             doc.ocr_status = OcrStatus.FAILED
-            doc.ocr_text = f"Cloud OCR failed: {str(e)}"
+            doc.ocr_text = "Failed to load document bytes for OCR."
+            db.commit()
+            return
 
+        result = AIExecutionService.extract_document(
+            db=db,
+            company_id=doc.company_id,
+            branch_id=doc.branch_id,
+            images=[target_bytes],
+            mime_type=target_mime,
+            document_id=doc.id,
+        )
+
+        doc.ocr_text = result.raw_text or "[No text detected]"
+        if result.structured_data:
+            doc.structured_data = json.dumps(result.structured_data)
+        doc.ocr_status = OcrStatus.COMPLETED
+        db.commit()
+    except Exception as exc:
+        doc.ocr_status = OcrStatus.FAILED
+        doc.ocr_text = f"Cloud OCR failed: {str(exc)}"
         db.commit()
     finally:
         db.close()

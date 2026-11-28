@@ -133,8 +133,11 @@ export default function AdminCompaniesPage() {
       setDashboardData(data);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
+      setError(err.message || 'Failed to refresh dashboard metrics.');
     } finally {
-      setDashboardLoading(false);
+      setTimeout(() => {
+        setDashboardLoading(false);
+      }, 350);
     }
   };
 
@@ -208,16 +211,17 @@ export default function AdminCompaniesPage() {
     default_storage_limit_gb: 5,
     default_monthly_ai_budget_dollars: 25,
   });
-  const [aiProvidersConfig, setAiProvidersConfig] = useState({
-    gemini: { enabled: true, default_model: 'gemini-2.0-flash' },
-    gpt: { enabled: false, default_model: 'gpt-4o-mini' },
-    claude: { enabled: false, default_model: 'claude-3-5-sonnet-20241022' },
-  });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [applyToExisting, setApplyToExisting] = useState(false);
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [settingsError, setSettingsError] = useState('');
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const loadSystemSettings = async () => {
     setSettingsLoading(true);
@@ -230,9 +234,6 @@ export default function AdminCompaniesPage() {
           default_storage_limit_gb: Math.round((res.system_defaults.default_storage_limit_bytes || 5368709120) / (1024 * 1024 * 1024)),
           default_monthly_ai_budget_dollars: Math.round((res.system_defaults.default_monthly_ai_budget_cents || 2500) / 100),
         });
-      }
-      if (res.ai_providers) {
-        setAiProvidersConfig(res.ai_providers);
       }
       if (res.mfa_policy) {
         setPlatformPolicy(res.mfa_policy);
@@ -271,39 +272,6 @@ export default function AdminCompaniesPage() {
       }
     } catch (err) {
       setSettingsError(err.message || 'Failed to save default settings.');
-    } finally {
-      setSettingsSaving(false);
-    }
-  };
-
-  const handleSaveProviders = async () => {
-    setSettingsSaving(true);
-    setSettingsSuccess('');
-    setSettingsError('');
-    try {
-      await api.updateSystemSettings({ ai_providers: aiProvidersConfig });
-      if (aiProvidersConfig.gemini) {
-        await api.updatePlatformAIProvider('gemini', {
-          is_enabled: Boolean(aiProvidersConfig.gemini.enabled),
-          model_allow_list: [aiProvidersConfig.gemini.default_model || 'gemini-2.0-flash'],
-        }).catch(() => {});
-      }
-      if (aiProvidersConfig.gpt) {
-        await api.updatePlatformAIProvider('openai', {
-          is_enabled: Boolean(aiProvidersConfig.gpt.enabled),
-          model_allow_list: [aiProvidersConfig.gpt.default_model || 'gpt-4o-mini'],
-        }).catch(() => {});
-      }
-      if (aiProvidersConfig.claude) {
-        await api.updatePlatformAIProvider('anthropic', {
-          is_enabled: Boolean(aiProvidersConfig.claude.enabled),
-          model_allow_list: [aiProvidersConfig.claude.default_model || 'claude-3-5-sonnet-20241022'],
-        }).catch(() => {});
-      }
-      setSettingsSuccess('AI provider availability controls updated.');
-      setTimeout(() => setSettingsSuccess(''), 5000);
-    } catch (err) {
-      setSettingsError(err.message || 'Failed to update AI provider controls.');
     } finally {
       setSettingsSaving(false);
     }
@@ -685,8 +653,70 @@ export default function AdminCompaniesPage() {
     liveCompanies: companies.length,
   };
 
+  // Close open modals on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (selectedOnboarding && !submittingAction) {
+          closeReviewModal();
+        } else if (showAddModal && !addLoading) {
+          closeAddModal();
+        } else if (selectedAuditLog) {
+          setSelectedAuditLog(null);
+        } else if (showEditCompanyModal && !editCompanyLoading) {
+          setShowEditCompanyModal(false);
+          setSelectedCompanyForEdit(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedOnboarding, submittingAction, showAddModal, addLoading, selectedAuditLog, showEditCompanyModal, editCompanyLoading]);
+
   return (
     <div className="app-shell">
+      {/* Floating Toast Notification */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '74px',
+          right: '24px',
+          zIndex: 9999,
+          backgroundColor: toastMessage.type === 'error' ? '#fef2f2' : '#f0fdf4',
+          color: toastMessage.type === 'error' ? '#991b1b' : '#166534',
+          border: `1px solid ${toastMessage.type === 'error' ? '#f87171' : '#86efac'}`,
+          padding: '12px 18px',
+          borderRadius: '10px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          fontSize: '13.5px',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}>
+          {toastMessage.type === 'error' ? (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+          )}
+          <span>{toastMessage.message}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              marginLeft: '8px',
+              color: toastMessage.type === 'error' ? '#991b1b' : '#166534',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
       
       {/* ── Top Navigation Bar ────────────────────────────────────────────── */}
       <header className="topnav" role="banner">
@@ -1005,16 +1035,70 @@ export default function AdminCompaniesPage() {
       >
         <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '1.5rem 2rem' }}>
 
+          {/* Dismissible Alert Message Banners */}
+          {error && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fca5a5',
+              borderRadius: '8px',
+              color: '#b91c1c',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 700 }}>✕</span>
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError('')}
+                style={{ background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer', fontSize: '16px', fontWeight: 700, padding: '0 4px' }}
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {settingsSuccess && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              color: '#15803d',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 700 }}>✓</span>
+                <span>{settingsSuccess}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsSuccess('')}
+                style={{ background: 'none', border: 'none', color: '#15803d', cursor: 'pointer', fontSize: '16px', fontWeight: 700, padding: '0 4px' }}
+                title="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Section Header: Platform Dashboard */}
           {activeTab === 'dashboard' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                   Platform Dashboard
                 </h2>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                  High-level ecosystem health, active tenant metrics, resource storage, and AI processing volume.
-                </p>
               </div>
               <button
                 onClick={loadDashboard}
@@ -1024,17 +1108,28 @@ export default function AdminCompaniesPage() {
                   alignItems: 'center',
                   gap: '8px',
                   backgroundColor: '#ffffff',
-                  color: '#475569',
+                  color: dashboardLoading ? '#94a3b8' : '#475569',
                   padding: '9px 16px',
                   borderRadius: '8px',
                   border: '1px solid #cbd5e1',
                   fontWeight: 600,
                   fontSize: '13px',
-                  cursor: 'pointer',
+                  cursor: dashboardLoading ? 'not-allowed' : 'pointer',
                   boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease',
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ animation: dashboardLoading ? 'spin 0.8s linear infinite' : 'none' }}
+                >
                   <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                 </svg>
                 {dashboardLoading ? 'Refreshing...' : 'Refresh Metrics'}
@@ -1047,12 +1142,9 @@ export default function AdminCompaniesPage() {
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                     Company Onboarding
                   </h2>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                    Review submitted onboarding registrations, request changes, and provision multi-tenant enterprises.
-                  </p>
                 </div>
 
                 <button
@@ -1175,12 +1267,9 @@ export default function AdminCompaniesPage() {
           {activeTab === 'companies' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                   Live Companies &amp; Workspaces
                 </h2>
-                <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                  Active enterprise tenants, provisioned branches, and corporate workspace management.
-                </p>
               </div>
 
               <button
@@ -1213,36 +1302,27 @@ export default function AdminCompaniesPage() {
           {/* Section Header: Platform Audit Logs */}
           {activeTab === 'audit' && (
             <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                 Platform Audit Logs
               </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                Immutable platform-wide audit trail of security, authentication, tenancy, and administrative operations.
-              </p>
             </div>
           )}
 
           {/* Section Header: AI Infrastructure & Model Governance */}
           {activeTab === 'ai' && (
             <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                 AI Infrastructure &amp; Model Governance
               </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                Centralized platform control over AI foundation providers, encrypted API credentials, model catalogue, company assignments, and company model access requests.
-              </p>
             </div>
           )}
 
           {/* Section Header: System Settings & Security */}
           {(activeTab === 'settings' || activeTab === 'security') && (
             <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 3px 0', color: '#0f172a', letterSpacing: '-0.01em' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#0f172a', letterSpacing: '-0.01em' }}>
                 System Settings &amp; Security
               </h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-                Configure platform defaults for company quotas, AI foundation provider availability, and root security policies.
-              </p>
             </div>
           )}
 
@@ -1251,10 +1331,6 @@ export default function AdminCompaniesPage() {
           <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>
             <div className="spinner" style={{ margin: '0 auto 12px auto' }} />
             Loading records...
-          </div>
-        ) : error ? (
-          <div style={{ padding: '24px', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#b91c1c' }}>
-            {error}
           </div>
         ) : activeTab === 'dashboard' ? (
           /* ── PLATFORM DASHBOARD TAB ────────────────────────────────────────── */
@@ -1406,28 +1482,28 @@ export default function AdminCompaniesPage() {
                     </div>
                   ) : (
                     <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', tableLayout: 'fixed' }}>
                         <thead>
-                          <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                            <th style={{ padding: '12px 16px' }}>Timestamp</th>
-                            <th style={{ padding: '12px 16px' }}>Action</th>
-                            <th style={{ padding: '12px 16px' }}>Actor</th>
-                            <th style={{ padding: '12px 16px' }}>Target</th>
-                            <th style={{ padding: '12px 16px' }}>IP</th>
+                          <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '10.5px', letterSpacing: '0.4px' }}>
+                            <th style={{ padding: '8px 10px', width: '20%' }}>Timestamp</th>
+                            <th style={{ padding: '8px 10px', width: '25%' }}>Action</th>
+                            <th style={{ padding: '8px 10px', width: '20%' }}>Actor</th>
+                            <th style={{ padding: '8px 10px', width: '20%' }}>Target</th>
+                            <th style={{ padding: '8px 10px', width: '15%' }}>IP</th>
                           </tr>
                         </thead>
                         <tbody>
                           {dashboardData.recent_activity.map((ev, i) => (
                             <tr key={ev.id || i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '12px 16px', color: '#64748b', whiteSpace: 'nowrap', fontSize: '12px' }}>
+                              <td style={{ padding: '7px 10px', color: '#64748b', whiteSpace: 'nowrap', fontSize: '11px', verticalAlign: 'middle' }}>
                                 {ev.occurred_at ? new Date(ev.occurred_at).toLocaleString() : '—'}
                               </td>
-                              <td style={{ padding: '12px 16px' }}>
+                              <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
                                 <span style={{
                                   display: 'inline-block',
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  fontSize: '11px',
+                                  padding: '1.5px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '10.5px',
                                   fontWeight: 600,
                                   fontFamily: 'monospace',
                                   backgroundColor: ev.action?.includes('fail') || ev.action?.includes('suspend') ? '#fee2e2' : '#f1f5f9',
@@ -1436,13 +1512,13 @@ export default function AdminCompaniesPage() {
                                   {ev.action}
                                 </span>
                               </td>
-                              <td style={{ padding: '12px 16px', color: '#1e293b' }}>
+                              <td style={{ padding: '7px 10px', color: '#1e293b', fontSize: '11px', verticalAlign: 'middle' }}>
                                 {ev.actor_type} {ev.actor_id ? `#${ev.actor_id}` : ''}
                               </td>
-                              <td style={{ padding: '12px 16px', color: '#475569' }}>
+                              <td style={{ padding: '7px 10px', color: '#475569', fontSize: '11px', verticalAlign: 'middle' }}>
                                 {ev.object_type ? `${ev.object_type} #${ev.object_id || ''}` : (ev.company_id ? `Company #${ev.company_id}` : 'Platform')}
                               </td>
-                              <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px' }}>
+                              <td style={{ padding: '7px 10px', color: '#64748b', fontFamily: 'monospace', fontSize: '10.5px', verticalAlign: 'middle' }}>
                                 {ev.ip || '—'}
                               </td>
                             </tr>
@@ -1479,87 +1555,89 @@ export default function AdminCompaniesPage() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', tableLayout: 'fixed' }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                      <th style={{ padding: '14px 20px' }}>Company Name</th>
-                      <th style={{ padding: '14px 20px' }}>Contact Person</th>
-                      <th style={{ padding: '14px 20px' }}>Status</th>
-                      <th style={{ padding: '14px 20px' }}>Initiated / Updated</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '10.5px', letterSpacing: '0.4px' }}>
+                      <th style={{ padding: '8px 10px', width: '26%' }}>Company Name</th>
+                      <th style={{ padding: '8px 10px', width: '22%' }}>Contact Person</th>
+                      <th style={{ padding: '8px 10px', width: '16%' }}>Status</th>
+                      <th style={{ padding: '8px 10px', width: '16%' }}>Initiated / Updated</th>
+                      <th style={{ padding: '8px 10px', width: '20%', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {onboardings.map((app) => (
                       <tr key={app.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s' }}>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px' }}>
                             {app.legal_company_name || app.initial_company_name}
                           </div>
                           {app.legal_company_name && app.legal_company_name !== app.initial_company_name && (
                             <div style={{ fontSize: '11px', color: '#64748b' }}>Init: {app.initial_company_name}</div>
                           )}
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ fontWeight: 500, color: '#1e293b' }}>{app.contact_name}</div>
-                          <div style={{ fontSize: '12px', color: '#64748b' }}>{app.contact_email}</div>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ fontWeight: 500, color: '#1e293b', fontSize: '12px' }}>{app.contact_name}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>{app.contact_email}</div>
                           {app.auth_contact_mobile && (
-                            <div style={{ fontSize: '11px', color: '#94a3b8' }}>{app.auth_contact_mobile}</div>
+                            <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>{app.auth_contact_mobile}</div>
                           )}
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
                           {getStatusBadge(app.status)}
                           {app.status === 'changes_requested' && app.review_comments && (
-                            <div style={{ fontSize: '11px', color: '#b45309', marginTop: '4px', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '11px', color: '#b45309', marginTop: '3px', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               Note: {app.review_comments}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '16px 20px', color: '#64748b', fontSize: '12px' }}>
+                        <td style={{ padding: '7px 10px', color: '#64748b', fontSize: '11px', verticalAlign: 'middle' }}>
                           <div>{new Date(app.created_at).toLocaleDateString()}</div>
-                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '10.5px', color: '#94a3b8' }}>
                             {app.submitted_at ? `Submitted: ${new Date(app.submitted_at).toLocaleDateString()}` : 'Not submitted yet'}
                           </div>
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <td style={{ padding: '7px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'inline-flex', gap: '5px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'nowrap' }}>
                             {app.status === 'approved' && app.company_id && (
                               <button
                                 onClick={() => handleOpenCompanyDossier(app.company_id)}
                                 style={{
-                                  padding: '6px 14px',
-                                  borderRadius: '6px',
+                                  padding: '4px 8px',
+                                  borderRadius: '5px',
                                   border: '1px solid #0284c7',
                                   backgroundColor: '#f0f9ff',
                                   color: '#0369a1',
                                   fontWeight: 600,
-                                  fontSize: '12px',
+                                  fontSize: '11px',
                                   cursor: 'pointer',
                                   transition: 'all 0.15s',
                                   display: 'inline-flex',
                                   alignItems: 'center',
                                   gap: '4px',
+                                  whiteSpace: 'nowrap',
                                 }}
                               >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                   <polyline points="14 2 14 8 20 8"/>
                                 </svg>
-                                <span>View Dossier</span>
+                                <span>Dossier</span>
                               </button>
                             )}
                             <button
                               onClick={() => openReviewModal(app.id)}
                               style={{
-                                padding: '6px 14px',
-                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                borderRadius: '5px',
                                 border: '1px solid #cbd5e1',
                                 backgroundColor: '#ffffff',
                                 color: '#0f172a',
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
                                 transition: 'all 0.15s',
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               {app.status === 'submitted' ? 'Review Application' : 'Review Details'}
@@ -1582,62 +1660,54 @@ export default function AdminCompaniesPage() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', tableLayout: 'fixed' }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                      <th style={{ padding: '14px 20px' }}>Company</th>
-                      <th style={{ padding: '14px 20px' }}>Code / Tax</th>
-                      <th style={{ padding: '14px 20px' }}>Quotas &amp; Live Capacity</th>
-                      <th style={{ padding: '14px 20px' }}>Status &amp; MFA</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '10.5px', letterSpacing: '0.4px' }}>
+                      <th style={{ padding: '8px 10px', width: '22%' }}>Company</th>
+                      <th style={{ padding: '8px 10px', width: '13%' }}>Code / Tax</th>
+                      <th style={{ padding: '8px 10px', width: '33%' }}>Quotas &amp; Live Capacity</th>
+                      <th style={{ padding: '8px 10px', width: '12%' }}>Status &amp; MFA</th>
+                      <th style={{ padding: '8px 10px', width: '20%', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {companies.map((c) => (
                       <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</div>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '12px' }}>{c.name}</div>
                           {c.address && (
-                            <div style={{ fontSize: '11px', color: '#64748b', maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '11px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.address}>
                               {c.address}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>{c.code}</div>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b', fontSize: '11.5px' }}>{c.code}</div>
                           <div style={{ fontSize: '11px', color: '#64748b' }}>GSTIN: {c.gstin || '—'}</div>
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(110px, 1fr))', gap: '6px', fontSize: '11px' }}>
-                            <div style={{ backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                              <span style={{ color: '#64748b' }}>Branches: </span>
-                              <strong style={{ color: '#0f172a' }}>{c.branch_count} / {c.max_branches ?? 5}</strong>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ color: '#64748b' }}>Branches: <strong style={{ color: '#0f172a', fontWeight: 600 }}>{c.branch_count}/{c.max_branches ?? 5}</strong></span>
+                              <span style={{ color: '#cbd5e1' }}>•</span>
+                              <span style={{ color: '#64748b' }}>Users: <strong style={{ color: '#0f172a', fontWeight: 600 }}>{c.user_count}/{c.max_users ?? 20}</strong></span>
                             </div>
-                            <div style={{ backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                              <span style={{ color: '#64748b' }}>Users: </span>
-                              <strong style={{ color: '#0f172a' }}>{c.user_count} / {c.max_users ?? 20}</strong>
-                            </div>
-                            <div style={{ backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                              <span style={{ color: '#64748b' }}>Storage: </span>
-                              <strong style={{ color: '#0f172a' }}>{formatBytes(c.storage_used_bytes || 0)} / {formatBytes(c.storage_limit_bytes || 5368709120)}</strong>
-                            </div>
-                            <div style={{ backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                              <span style={{ color: '#64748b' }}>AI Budget: </span>
-                              <strong style={{ color: '#0f172a' }}>
-                                ₹{Number(c.ai_spent_inr !== undefined ? c.ai_spent_inr : (((c.ai_spent_cents || 0) / 100) * 85)).toFixed(2)} / ₹{Number(c.monthly_ai_budget_inr || (((c.monthly_ai_budget_cents || 2500) / 100) * 85)).toFixed(2)}
-                              </strong>
-                              <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '4px' }}>
-                                (${((c.ai_spent_cents || 0) / 100).toFixed(2)} / ${((c.monthly_ai_budget_cents || 2500) / 100).toFixed(2)})
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span style={{ color: '#64748b' }}>Storage: <strong style={{ color: '#0f172a', fontWeight: 600 }}>{formatBytes(c.storage_used_bytes || 0)} / {formatBytes(c.storage_limit_bytes || 5368709120)}</strong></span>
+                              <span style={{ color: '#cbd5e1' }}>•</span>
+                              <span style={{ color: '#64748b' }}>
+                                AI: <strong style={{ color: '#0f172a', fontWeight: 600 }}>₹{Number(c.ai_spent_inr !== undefined ? c.ai_spent_inr : (((c.ai_spent_cents || 0) / 100) * 85)).toFixed(2)} / ₹{Number(c.monthly_ai_budget_inr || (((c.monthly_ai_budget_cents || 2500) / 100) * 85)).toFixed(2)}</strong>
+                                <span style={{ color: '#94a3b8', fontSize: '10px', marginLeft: '3px' }}>(${((c.ai_spent_cents || 0) / 100).toFixed(2)})</span>
                               </span>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-start' }}>
                             <span style={{
-                              padding: '2px 8px',
+                              padding: '1.5px 7px',
                               borderRadius: '10px',
-                              fontSize: '11px',
+                              fontSize: '10.5px',
                               fontWeight: 700,
                               backgroundColor: c.status === 'active' ? '#f0fdf4' : '#fef2f2',
                               color: c.status === 'active' ? '#15803d' : '#b91c1c',
@@ -1650,64 +1720,67 @@ export default function AdminCompaniesPage() {
                               fontWeight: 600,
                               color: c.mfa_required_for_all ? '#166534' : '#64748b',
                               backgroundColor: c.mfa_required_for_all ? '#dcfce7' : '#f1f5f9',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
                             }}>
                               {c.mfa_required_for_all ? 'MFA Mandated' : 'MFA Optional'}
                             </span>
                           </div>
                         </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center' }}>
+                        <td style={{ padding: '7px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                          <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                             <button
                               onClick={() => handleOpenCompanyDossier(c.id)}
                               style={{
-                                padding: '6px 14px',
-                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                borderRadius: '5px',
                                 border: '1px solid #0284c7',
                                 backgroundColor: '#f0f9ff',
                                 color: '#0369a1',
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '6px',
+                                gap: '4px',
+                                whiteSpace: 'nowrap',
                               }}
                               title="View full onboarding dossier & submitted details"
                             >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                 <polyline points="14 2 14 8 20 8"/>
                               </svg>
-                              <span>View Onboarding Dossier</span>
+                              <span>Dossier</span>
                             </button>
                             <button
                               onClick={() => handleOpenEditCompany(c)}
                               style={{
-                                padding: '5px 12px',
-                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                borderRadius: '5px',
                                 border: '1px solid #cbd5e1',
                                 backgroundColor: '#ffffff',
                                 color: '#1e293b',
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
+                                whiteSpace: 'nowrap',
                               }}
                             >
-                              Edit Quotas
+                              Quotas
                             </button>
                             <button
                               onClick={() => handleToggleCompany(c)}
                               style={{
-                                padding: '5px 12px',
-                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                borderRadius: '5px',
                                 border: '1px solid #cbd5e1',
                                 backgroundColor: c.status === 'active' ? '#ffffff' : '#f0fdf4',
                                 color: c.status === 'active' ? '#b91c1c' : '#15803d',
                                 fontWeight: 600,
-                                fontSize: '12px',
+                                fontSize: '11px',
                                 cursor: 'pointer',
+                                whiteSpace: 'nowrap',
                               }}
                             >
                               {c.status === 'active' ? 'Suspend' : 'Activate'}
@@ -1757,28 +1830,28 @@ export default function AdminCompaniesPage() {
               <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>No audit records found.</div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px', tableLayout: 'fixed' }}>
                   <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
-                      <th style={{ padding: '12px 16px' }}>Timestamp (UTC)</th>
-                      <th style={{ padding: '12px 16px' }}>Action</th>
-                      <th style={{ padding: '12px 16px' }}>Actor</th>
-                      <th style={{ padding: '12px 16px' }}>Target</th>
-                      <th style={{ padding: '12px 16px' }}>Company ID</th>
-                      <th style={{ padding: '12px 16px' }}>IP / Request ID</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Details</th>
+                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', textTransform: 'uppercase', fontSize: '10.5px', letterSpacing: '0.4px' }}>
+                      <th style={{ padding: '8px 10px', width: '18%' }}>Timestamp (UTC)</th>
+                      <th style={{ padding: '8px 10px', width: '20%' }}>Action</th>
+                      <th style={{ padding: '8px 10px', width: '16%' }}>Actor</th>
+                      <th style={{ padding: '8px 10px', width: '16%' }}>Target</th>
+                      <th style={{ padding: '8px 10px', width: '12%' }}>Company ID</th>
+                      <th style={{ padding: '8px 10px', width: '10%' }}>IP / Request ID</th>
+                      <th style={{ padding: '8px 10px', width: '8%', textAlign: 'right' }}>Details</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditLogs.map(log => (
                       <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap', color: '#1e293b' }}>{log.occurred_at}</td>
-                        <td style={{ padding: '12px 16px' }}>
+                        <td style={{ padding: '7px 10px', whiteSpace: 'nowrap', color: '#1e293b', fontSize: '11px', verticalAlign: 'middle' }}>{log.occurred_at}</td>
+                        <td style={{ padding: '7px 10px', verticalAlign: 'middle' }}>
                           <span style={{
                             display: 'inline-block',
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '11px',
+                            padding: '1.5px 6px',
+                            borderRadius: '4px',
+                            fontSize: '10.5px',
                             fontWeight: '600',
                             fontFamily: 'monospace',
                             background: log.action?.includes('fail') || log.action?.includes('suspend') || log.action?.includes('reject') ? '#fee2e2' : '#e0f2fe',
@@ -1787,16 +1860,16 @@ export default function AdminCompaniesPage() {
                             {log.action}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 16px' }}>{log.actor_type} {log.actor_id ? `#${log.actor_id}` : ''}</td>
-                        <td style={{ padding: '12px 16px' }}>{log.object_type ? `${log.object_type} #${log.object_id || ''}` : '—'}</td>
-                        <td style={{ padding: '12px 16px' }}>{log.company_id ? `Company #${log.company_id}` : 'Platform'}</td>
-                        <td style={{ padding: '12px 16px', fontSize: '11px', fontFamily: 'monospace', color: '#64748b' }}>
+                        <td style={{ padding: '7px 10px', fontSize: '11px', verticalAlign: 'middle' }}>{log.actor_type} {log.actor_id ? `#${log.actor_id}` : ''}</td>
+                        <td style={{ padding: '7px 10px', fontSize: '11px', verticalAlign: 'middle' }}>{log.object_type ? `${log.object_type} #${log.object_id || ''}` : '—'}</td>
+                        <td style={{ padding: '7px 10px', fontSize: '11px', verticalAlign: 'middle' }}>{log.company_id ? `Company #${log.company_id}` : 'Platform'}</td>
+                        <td style={{ padding: '7px 10px', fontSize: '10.5px', fontFamily: 'monospace', color: '#64748b', verticalAlign: 'middle' }}>
                           <div>{log.ip || '—'}</div>
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <td style={{ padding: '7px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
                           <button
                             onClick={() => setSelectedAuditLog(log)}
-                            style={{ padding: '4px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
+                            style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer' }}
                           >
                             Inspect
                           </button>
@@ -1843,17 +1916,7 @@ export default function AdminCompaniesPage() {
           />
         ) : activeTab === 'ai' ? (
           /* ── AI INFRASTRUCTURE & MODEL GOVERNANCE TAB ─────────────────────── */
-          <MasterAdminAIManagementView
-            showToast={(msg, type) => {
-              if (type === 'error') {
-                setError(msg);
-                setTimeout(() => setError(''), 5000);
-              } else {
-                setSettingsSuccess(msg);
-                setTimeout(() => setSettingsSuccess(''), 5000);
-              }
-            }}
-          />
+          <MasterAdminAIManagementView showToast={showToast} />
         ) : (
           /* ── SYSTEM SETTINGS & SECURITY TAB ────────────────────────────────── */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -2042,178 +2105,63 @@ export default function AdminCompaniesPage() {
               </form>
             </div>
 
-            {/* CARD B: AI PROVIDER CONTROLS */}
+            {/* AI & Model Governance Hub Callout */}
             <div style={{
               backgroundColor: '#ffffff',
               borderRadius: '12px',
               border: '1px solid #e2e8f0',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-              overflow: 'hidden',
+              padding: '16px 20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
             }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    backgroundColor: '#faf5ff',
-                    color: '#9333ea',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
-                      Foundation AI Provider Availability Controls
-                    </h3>
-                    <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                      Master Admin controls which external AI LLM providers and models are enabled for invoice OCR and data extraction across all tenants.
-                    </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  backgroundColor: '#f5f3ff',
+                  color: '#7c3aed',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2 2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/>
+                    <rect x="3" y="8" width="18" height="12" rx="2"/>
+                    <circle cx="8" cy="14" r="1.5"/>
+                    <circle cx="16" cy="14" r="1.5"/>
+                  </svg>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
+                    AI Foundation Infrastructure &amp; Model Governance
                   </div>
                 </div>
               </div>
-
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                
-                {/* Provider 1: Google Gemini */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ flex: 1, minWidth: '220px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Google Gemini</span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: aiProvidersConfig.gemini?.enabled ? '#dcfce7' : '#f1f5f9', color: aiProvidersConfig.gemini?.enabled ? '#166534' : '#64748b' }}>
-                        {aiProvidersConfig.gemini?.enabled ? 'ACTIVE' : 'DISABLED'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b' }}>Primary multimodal OCR &amp; structured schema extraction engine.</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '2px' }}>Model</label>
-                      <input
-                        type="text"
-                        value={aiProvidersConfig.gemini?.default_model || 'gemini-2.0-flash'}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          gemini: { ...aiProvidersConfig.gemini, default_model: e.target.value }
-                        })}
-                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', width: '160px' }}
-                      />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(aiProvidersConfig.gemini?.enabled)}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          gemini: { ...aiProvidersConfig.gemini, enabled: e.target.checked }
-                        })}
-                      />
-                      Enabled
-                    </label>
-                  </div>
-                </div>
-
-                {/* Provider 2: OpenAI GPT */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ flex: 1, minWidth: '220px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>OpenAI GPT</span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: aiProvidersConfig.gpt?.enabled ? '#dcfce7' : '#f1f5f9', color: aiProvidersConfig.gpt?.enabled ? '#166534' : '#64748b' }}>
-                        {aiProvidersConfig.gpt?.enabled ? 'ACTIVE' : 'DISABLED'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b' }}>Secondary fallback vision &amp; analysis model.</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '2px' }}>Model</label>
-                      <input
-                        type="text"
-                        value={aiProvidersConfig.gpt?.default_model || 'gpt-4o-mini'}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          gpt: { ...aiProvidersConfig.gpt, default_model: e.target.value }
-                        })}
-                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', width: '160px' }}
-                      />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(aiProvidersConfig.gpt?.enabled)}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          gpt: { ...aiProvidersConfig.gpt, enabled: e.target.checked }
-                        })}
-                      />
-                      Enabled
-                    </label>
-                  </div>
-                </div>
-
-                {/* Provider 3: Anthropic Claude */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ flex: 1, minWidth: '220px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>Anthropic Claude</span>
-                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', backgroundColor: aiProvidersConfig.claude?.enabled ? '#dcfce7' : '#f1f5f9', color: aiProvidersConfig.claude?.enabled ? '#166534' : '#64748b' }}>
-                        {aiProvidersConfig.claude?.enabled ? 'ACTIVE' : 'DISABLED'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b' }}>High accuracy reasoning model for complex invoice layouts.</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#64748b', marginBottom: '2px' }}>Model</label>
-                      <input
-                        type="text"
-                        value={aiProvidersConfig.claude?.default_model || 'claude-3-5-sonnet-20241022'}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          claude: { ...aiProvidersConfig.claude, default_model: e.target.value }
-                        })}
-                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', width: '160px' }}
-                      />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
-                      <input
-                        type="checkbox"
-                        checked={Boolean(aiProvidersConfig.claude?.enabled)}
-                        onChange={(e) => setAiProvidersConfig({
-                          ...aiProvidersConfig,
-                          claude: { ...aiProvidersConfig.claude, enabled: e.target.checked }
-                        })}
-                      />
-                      Enabled
-                    </label>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={handleSaveProviders}
-                    disabled={settingsSaving}
-                    style={{
-                      padding: '9px 20px',
-                      borderRadius: '8px',
-                      backgroundColor: '#9333ea',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {settingsSaving ? 'Updating...' : 'Save AI Provider Controls'}
-                  </button>
-                </div>
-
-              </div>
+              <button
+                type="button"
+                onClick={() => switchTab('ai')}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  borderRadius: '6px',
+                  backgroundColor: '#eff6ff',
+                  border: '1px solid #93c5fd',
+                  color: '#1d4ed8',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <span>Open AI &amp; Model Governance</span>
+                <span>&rarr;</span>
+              </button>
             </div>
 
             {/* Alerts */}
@@ -2720,9 +2668,6 @@ export default function AdminCompaniesPage() {
                   </div>
                 ) : (
                   <div>
-                    <p style={{ margin: '0 0 16px 0', fontSize: '13.5px', color: '#475569', lineHeight: 1.5 }}>
-                      Two-factor authentication adds an extra layer of protection to your root administrator account by requiring a 6-digit verification code from Microsoft Authenticator or Google Authenticator on login.
-                    </p>
                     <button
                       onClick={() => setShowMfaEnrollModal(true)}
                       style={{
@@ -2758,23 +2703,33 @@ export default function AdminCompaniesPage() {
 
       {/* ── MODAL 1: ADD COMPANY (INITIATE ONBOARDING) ────────────────────────── */}
       {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px',
-        }}>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !addLoading) {
+              closeAddModal();
+            }
+          }}
+        >
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '12px',
+            borderRadius: '16px',
             maxWidth: '520px',
             width: '100%',
             padding: '28px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0',
           }}>
             {!addSuccessData ? (
               <>
@@ -3011,25 +2966,36 @@ export default function AdminCompaniesPage() {
 
       {/* ── MODAL 2: APPLICATION REVIEW DRAWER / MODAL ───────────────────────── */}
       {selectedOnboarding && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px',
-        }}>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !submittingAction) {
+              closeReviewModal();
+            }
+          }}
+        >
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            maxWidth: '860px',
+            borderRadius: '16px',
+            maxWidth: '920px',
             width: '100%',
             maxHeight: '90vh',
+            margin: 'auto',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0',
             overflow: 'hidden',
           }}>
             {/* Modal Header */}
@@ -3476,25 +3442,35 @@ export default function AdminCompaniesPage() {
 
       {/* ── Modal for Inspecting Platform Audit Log Metadata ── */}
       {selectedAuditLog && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 60,
-          padding: '20px',
-        }}>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedAuditLog(null);
+            }
+          }}
+        >
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '12px',
+            borderRadius: '16px',
             maxWidth: '600px',
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
             padding: '24px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
@@ -3734,25 +3710,36 @@ export default function AdminCompaniesPage() {
 
       {/* ── MODAL: EDIT COMPANY & QUOTAS ───────────────────────────────────────── */}
       {showEditCompanyModal && selectedCompanyForEdit && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
-          padding: '20px',
-        }}>
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '24px',
+            boxSizing: 'border-box',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !editCompanyLoading) {
+              setShowEditCompanyModal(false);
+              setSelectedCompanyForEdit(null);
+            }
+          }}
+        >
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '12px',
+            borderRadius: '16px',
             maxWidth: '620px',
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
             padding: '28px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+            border: '1px solid #e2e8f0',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div>

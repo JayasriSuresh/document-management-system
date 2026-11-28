@@ -161,16 +161,20 @@ def resolve_ai_config(
     elif operation in ("generate", "generation", "invoice_generation"):
         task_keys = ["generation", "generate"]
 
-    assignment = (
-        db.query(CompanyAIModelAssignment)
-        .filter(
-            CompanyAIModelAssignment.company_id == company_id,
-            CompanyAIModelAssignment.task_type.in_(task_keys),
-            CompanyAIModelAssignment.is_enabled == True,
+    assignment = None
+    for tk in task_keys:
+        assignment = (
+            db.query(CompanyAIModelAssignment)
+            .filter(
+                CompanyAIModelAssignment.company_id == company_id,
+                CompanyAIModelAssignment.task_type == tk,
+                CompanyAIModelAssignment.is_enabled == True,
+            )
+            .order_by(CompanyAIModelAssignment.id.desc())
+            .first()
         )
-        .order_by(CompanyAIModelAssignment.id.desc())
-        .first()
-    )
+        if assignment:
+            break
 
     allowed_providers = comp_setting.allowed_providers if comp_setting and comp_setting.allowed_providers else ["gemini", "openai", "anthropic"]
 
@@ -183,15 +187,25 @@ def resolve_ai_config(
         timeout_seconds = 30
     else:
         # Check branch config or company defaults (with fallback compatibility)
-        branch_cfg = (
-            db.query(BranchAIConfig)
-            .filter(
-                BranchAIConfig.company_id == company_id,
-                BranchAIConfig.branch_id == branch_id,
-                BranchAIConfig.operation == operation,
+        branch_op_keys = [operation]
+        if operation in ("read", "ocr", "extraction"):
+            branch_op_keys = [operation, "read", "ocr"]
+        elif operation in ("generate", "generation", "invoice_generation"):
+            branch_op_keys = [operation, "generate", "generation"]
+
+        branch_cfg = None
+        for bok in branch_op_keys:
+            branch_cfg = (
+                db.query(BranchAIConfig)
+                .filter(
+                    BranchAIConfig.company_id == company_id,
+                    BranchAIConfig.branch_id == branch_id,
+                    BranchAIConfig.operation == bok,
+                )
+                .first()
             )
-            .first()
-        )
+            if branch_cfg:
+                break
         if branch_cfg:
             primary_provider = branch_cfg.primary_provider
             primary_model = branch_cfg.primary_model
@@ -202,13 +216,13 @@ def resolve_ai_config(
         elif comp_setting:
             if operation in ("generate", "generation") and comp_setting.default_generate_provider:
                 primary_provider = comp_setting.default_generate_provider
-                primary_model = comp_setting.default_generate_model or "gemini-2.0-flash"
+                primary_model = comp_setting.default_generate_model or "gemini-3.6-flash"
             elif comp_setting.default_read_provider:
                 primary_provider = comp_setting.default_read_provider
-                primary_model = comp_setting.default_read_model or "gemini-2.0-flash"
+                primary_model = comp_setting.default_read_model or "gemini-3.6-flash"
             else:
                 primary_provider = "gemini"
-                primary_model = "gemini-2.0-flash"
+                primary_model = "gemini-3.6-flash"
             fallback_provider = None
             fallback_model = None
             max_retries = 2
